@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pug Run: Treat Collector</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 450px;
+            border: 4px solid #fff;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: auto;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .overlay h1 {
+            font-size: 42px;
+            color: #f1c40f;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .overlay p {
+            font-size: 18px;
+            margin-bottom: 20px;
+            max-width: 500px;
+            line-height: 1.4;
+        }
+
+        .btn {
+            background: #2ecc71;
+            color: #fff;
+            border: none;
+            padding: 12px 30px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #27ae60;
+            transition: all 0.1s ease;
+        }
+
+        .btn:hover {
+            background: #27ae60;
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #1e8449;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .controls-hint {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    
+    <div id="ui-layer">
+        <div class="hud">
+            <div id="treat-count">🦴 Treats: 0</div>
+            <div id="level-display">Level 1/10</div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay">
+        <h1>Pug Run!</h1>
+        <p>Help the little pug collect as many delicious dog treats as possible through 10 unique worlds!</p>
+        <button class="btn" onclick="startGame()">Start Game</button>
+        <div class="controls-hint">Controls: Arrow Keys / WASD to move & jump</div>
+    </div>
+
+    <!-- Level Complete Screen -->
+    <div id="level-screen" class="overlay hidden">
+        <h1 id="level-title">Level Cleared!</h1>
+        <p id="level-desc">Great job! Get ready for the next area.</p>
+        <button class="btn" onclick="nextLevel()">Next Level</button>
+    </div>
+
+    <!-- Game Over / Win Screen -->
+    <div id="end-screen" class="overlay hidden">
+        <h1 id="end-title">Game Over!</h1>
+        <p id="end-desc">You collected 0 treats!</p>
+        <button class="btn" onclick="restartGame()">Play Again</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// --- GAME STATE ---
+let gameState = 'START'; // START, PLAYING, LEVEL_CLEAR, GAME_OVER, WIN
+let currentLevel = 1;
+const maxLevels = 10;
+let totalTreats = 0;
+let cameraX = 0;
+const levelWidth = 3200;
+
+// Keys State
+const keys = {
+    left: false,
+    right: false,
+    up: false
+};
+
+// Listeners
+window.addEventListener('keydown', e => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = true;
+});
+
+window.addEventListener('keyup', e => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') keys.up = false;
+});
+
+// --- THEME DEFINITIONS ---
+const THEMES = ['SUNNY', 'JUNGLE', 'WINTER', 'CITY_NIGHT', 'CITY_DAY'];
+
+let currentTheme = 'SUNNY';
+let platforms = [];
+let treats = [];
+let finishLine = { x: 0, y: 0, w: 40, h: 80 };
+
+// --- PLAYER (PUG) ---
+const player = {
+    x: 100,
+    y: 200,
+    w: 36,
+    h: 28,
+    vx: 0,
+    vy: 0,
+    speed: 4.5,
+    jumpPower: -10.5,
+    gravity: 0.45,
+    grounded: false,
+    facing: 'right',
+    animFrame: 0,
+    animTimer: 0,
+
+    reset(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.grounded = false;
+    },
+
+    update() {
+        // Movement
+        if (keys.left) {
+            this.vx = -this.speed;
+            this.facing = 'left';
+        } else if (keys.right) {
+            this.vx = this.speed;
+            this.facing = 'right';
+        } else {
+            this.vx *= 0.7; // friction
+        }
+
+        if (keys.up && this.grounded) {
+            this.vy = this.jumpPower;
+            this.grounded = false;
+        }
+
+        // Apply Gravity
+        this.vy += this.gravity;
+
+        // X Position & Collision
+        this.x += this.vx;
+        if (this.x < 0) this.x = 0;
+
+        // Y Position & Collision
+        this.y += this.vy;
+        this.grounded = false;
+
+        // Platform Collisions
+        platforms.forEach(p => {
+            if (this.x + this.w > p.x && 
+                this.x < p.x + p.w && 
+                this.y + this.h >= p.y && 
+                this.y + this.h <= p.y + p.h + this.vy &&
+                this.vy >= 0) {
+                this.y = p.y - this.h;
+                this.vy = 0;
+                this.grounded = true;
+            }
+        });
+
+        // Bottom Boundary (Death / Reset)
+        if (this.y > canvas.height + 100) {
+            this.reset(100, 200);
+        }
+
+        // Animation timing
+        if (Math.abs(this.vx) > 0.5 && this.grounded) {
+            this.animTimer++;
+            if (this.animTimer % 8 === 0) {
+                this.animFrame = (this.animFrame + 1) % 2;
+            }
+        } else {
+            this.animFrame = 0;
+        }
+    },
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x - cameraX + this.w / 2, this.y + this.h / 2);
+        if (this.facing === 'left') {
+            ctx.scale(-1, 1);
+        }
+
+        // Draw Cute Procedural Pug
+        // Body
+        ctx.fillStyle = '#d7be82'; // Fawn color
+        ctx.beginPath();
+        ctx.roundRect(-16, -10, 28, 18, 6);
+        ctx.fill();
+
+        // Legs
+        ctx.fillStyle = '#b59a5b';
+        let legOffset = this.animFrame === 1 ? 3 : 0;
+        ctx.fillRect(-12 + legOffset, 6, 6, 8);
+        ctx.fillRect(4 - legOffset, 6, 6, 8);
+
+        // Curly Tail
+        ctx.strokeStyle = '#b59a5b';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(-16, -8, 4, 0, Math.PI * 1.5);
+        ctx.stroke();
+
+        // Head
+        ctx.fillStyle = '#d7be82';
+        ctx.beginPath();
+        ctx.arc(8, -6, 11, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Black Muzzle
+        ctx.fillStyle = '#2c2523';
+        ctx.beginPath();
+        ctx.roundRect(8, -5, 8, 8, 3);
+        ctx.fill();
+
+        // Nose
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(14, -4, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Floppy Ears
+        ctx.fillStyle = '#2c2523';
+        ctx.beginPath();
+        ctx.ellipse(3, -13, 4, 6, Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Big Eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(8, -9, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(9, -9, 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Eye Shine
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(10, -10, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+};
+
+// --- LEVEL GENERATION ---
+function generateLevel() {
+    platforms = [];
+    treats = [];
+
+    // Select random theme
+    currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
+
+    // Base Floor platforms with gaps
+    let x = 0;
+    while (x < levelWidth) {
+        let pWidth = 400 + Math.random() * 300;
+        if (x === 0) pWidth = 600; // Safe start area
+        
+        platforms.push({
+            x: x,
+            y: 380,
+            w: pWidth,
+            h: 70
+        });
+
+        // Spawn treats on main floor
+        for (let t = x + 100; t < x + pWidth - 50; t += 120) {
+            if (Math.random() > 0.3) {
+                treats.push({ x: t, y: 340, collected: false, floatOffset: Math.random() * 10 });
+            }
+        }
+
+        // Floating platforms above
+        if (x > 300 && x < levelWidth - 400) {
+            let platY = 240 + (Math.random() * 60 - 30);
+            let platW = 120 + Math.random() * 100;
+            platforms.push({
+                x: x + 100,
+                y: platY,
+                w: platW,
+                h: 20
+            });
+
+            // Treat on floating platform
+            treats.push({ x: x + 100 + platW/2, y: platY - 35, collected: false, floatOffset: Math.random() * 10 });
+        }
+
+        x += pWidth + (100 + Math.random() * 120); // Gap
+    }
+
+    // Finish Goal Platform
+    finishLine = {
+        x: levelWidth - 200,
+        y: 300,
+        w: 60,
+        h: 80
+    };
+    platforms.push({
+        x: levelWidth - 300,
+        y: 380,
+        w: 300,
+        h: 70
+    });
+
+    player.reset(100, 200);
+}
+
+// --- PARALLAX BACKGROUND DRAWING ---
+function drawParallaxBackground() {
+    // Layer 0: Sky
+    let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    
+    switch (currentTheme) {
+        case 'SUNNY':
+            bgGradient.addColorStop(0, '#70c5ce');
+            bgGradient.addColorStop(1, '#cce8e4');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Sun
+            ctx.fillStyle = '#fff7b1';
+            ctx.beginPath();
+            ctx.arc(650, 80, 40, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Clouds (Parallax 0.1)
+            drawClouds(0.1, '#ffffff');
+            break;
+
+        case 'JUNGLE':
+            bgGradient.addColorStop(0, '#134e5e');
+            bgGradient.addColorStop(1, '#71b280');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Distant Jungle Trees (Parallax 0.2)
+            drawDistantMountains(0.2, '#195b4e');
+            break;
+
+        case 'WINTER':
+            bgGradient.addColorStop(0, '#2c3e50');
+            bgGradient.addColorStop(1, '#000000');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Snow Mountains (Parallax 0.15)
+            drawDistantMountains(0.15, '#7f8c8d');
+            drawClouds(0.2, 'rgba(255, 255, 255, 0.6)');
+            break;
+
+        case 'CITY_NIGHT':
+            bgGradient.addColorStop(0, '#0f2027');
+            bgGradient.addColorStop(1, '#203a43');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Moon
+            ctx.fillStyle = '#f5f6fa';
+            ctx.beginPath();
+            ctx.arc(150, 70, 30, 0, Math.PI * 2);
+            ctx.fill();
+
+            // City Skyline (Parallax 0.2)
+            drawSkyline(0.2, '#111923', true);
+            break;
+
+        case 'CITY_DAY':
+            bgGradient.addColorStop(0, '#f39c12');
+            bgGradient.addColorStop(1, '#f1c40f');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // City Skyline (Parallax 0.2)
+            drawSkyline(0.2, '#d35400', false);
+            break;
+    }
+}
+
+// Background Helper Drawings
+function drawClouds(factor, color) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 800;
+    for (let i = -100; i < canvas.width + 200; i += 300) {
+        let x = i - offset;
+        ctx.beginPath();
+        ctx.arc(x, 100, 25, 0, Math.PI * 2);
+        ctx.arc(x + 25, 90, 35, 0, Math.PI * 2);
+        ctx.arc(x + 55, 100, 25, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawDistantMountains(factor, color) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 400;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    for (let x = -100; x < canvas.width + 200; x += 200) {
+        let rx = x - offset;
+        ctx.lineTo(rx + 100, 180);
+        ctx.lineTo(rx + 200, canvas.height);
+    }
+    ctx.fill();
+}
+
+function drawSkyline(factor, color, showLights) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 600;
+    
+    for (let x = -100; x < canvas.width + 200; x += 80) {
+        let rx = x - offset;
+        let h = 150 + (Math.sin(x) * 80);
+        ctx.fillRect(rx, canvas.height - h, 65, h);
+
+        if (showLights) {
+            ctx.fillStyle = '#f1c40f';
+            for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
+                for (let wx = rx + 8; wx < rx + 50; wx += 15) {
+                    if (Math.random() > 0.3) {
+                        ctx.fillRect(wx, wy, 8, 10);
+                    }
+                }
+            }
+            ctx.fillStyle = color; // Reset
+        }
+    }
+}
+
+// --- RENDERING WORLD OBJECTS ---
+function drawPlatforms() {
+    platforms.forEach(p => {
+        let rx = p.x - cameraX;
+
+        // Dynamic styling based on theme
+        switch (currentTheme) {
+            case 'SUNNY':
+                ctx.fillStyle = '#5cd38c'; // Grass top
+                ctx.fillRect(rx, p.y, p.w, 12);
+                ctx.fillStyle = '#8d5524'; // Dirt base
+                ctx.fillRect(rx, p.y + 12, p.w, p.h - 12);
+                break;
+            case 'JUNGLE':
+                ctx.fillStyle = '#27ae60';
+                ctx.fillRect(rx, p.y, p.w, 15);
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillRect(rx, p.y + 15, p.w, p.h - 15);
+                break;
+            case 'WINTER':
+                ctx.fillStyle = '#ecf0f1'; // Snow top
+                ctx.fillRect(rx, p.y, p.w, 14);
+                ctx.fillStyle = '#34495e';
+                ctx.fillRect(rx, p.y + 14, p.w, p.h - 14);
+                break;
+            case 'CITY_NIGHT':
+            case 'CITY_DAY':
+                ctx.fillStyle = '#7f8c8d'; // Concrete
+                ctx.fillRect(rx, p.y, p.w, p.h);
+                ctx.fillStyle = '#95a5a6';
+                ctx.fillRect(rx, p.y, p.w, 6);
+                break;
+        }
+    });
+}
+
+function drawTreats() {
+    let time = Date.now() * 0.005;
+    treats.forEach(t => {
+        if (t.collected) return;
+
+        let rx = t.x - cameraX;
+        let ry = t.y + Math.sin(time + t.floatOffset) * 4;
+
+        // Draw Dog Bone Treat
+        ctx.fillStyle = '#f39c12';
+        ctx.beginPath();
+        // Central bar
+        ctx.roundRect(rx - 10, ry - 4, 20, 8, 3);
+        ctx.fill();
+        // Bone Ends
+        ctx.beginPath();
+        ctx.arc(rx - 10, ry - 4, 5, 0, Math.PI * 2);
+        ctx.arc(rx - 10, ry + 4, 5, 0, Math.PI * 2);
+        ctx.arc(rx + 10, ry - 4, 5, 0, Math.PI * 2);
+        ctx.arc(rx + 10, ry + 4, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Treat Pickup Detection
+        if (player.x < t.x + 15 && player.x + player.w > t.x - 15 &&
+            player.y < ry + 15 && player.y + player.h > ry - 15) {
+            t.collected = true;
+            totalTreats++;
+            document.getElementById('treat-count').innerText = `🦴 Treats: ${totalTreats}`;
+        }
+    });
+}
+
+function drawFinishLine() {
+    let rx = finishLine.x - cameraX;
+    
+    // Dog House Finish Goal
+    ctx.fillStyle = '#e74c3c';
+    ctx.fillRect(rx, finishLine.y, finishLine.w, finishLine.h);
+    
+    // Roof
+    ctx.fillStyle = '#c0392b';
+    ctx.beginPath();
+    ctx.moveTo(rx - 10, finishLine.y);
+    ctx.lineTo(rx + finishLine.w / 2, finishLine.y - 30);
+    ctx.lineTo(rx + finishLine.w + 10, finishLine.y);
+    ctx.fill();
+
+    // Doorway
+    ctx.fillStyle = '#2c3e50';
+    ctx.beginPath();
+    ctx.arc(rx + finishLine.w / 2, finishLine.y + finishLine.h, 18, Math.PI, 0);
+    ctx.fill();
+
+    // Check Win Level Condition
+    if (player.x + player.w > finishLine.x && player.x < finishLine.x + finishLine.w) {
+        if (currentLevel < maxLevels) {
+            showLevelClear();
+        } else {
+            showGameWin();
+        }
+    }
+}
+
+// --- GAME LOOP ---
+function gameLoop() {
+    if (gameState === 'PLAYING') {
+        // Update
+        player.update();
+
+        // Dynamic Camera Tracking Player
+        cameraX = player.x - 200;
+        if (cameraX < 0) cameraX = 0;
+        if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
+
+        // Render
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawParallaxBackground();
+        drawPlatforms();
+        drawTreats();
+        drawFinishLine();
+        player.draw();
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+// --- STATE MANAGEMENT & UI ---
+function startGame() {
+    totalTreats = 0;
+    currentLevel = 1;
+    document.getElementById('treat-count').innerText = `🦴 Treats: 0`;
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('end-screen').classList.add('hidden');
+    
+    loadLevel(currentLevel);
+    gameState = 'PLAYING';
+}
+
+function loadLevel(lvl) {
+    document.getElementById('level-display').innerText = `Level ${lvl}/${maxLevels}`;
+    generateLevel();
+}
+
+function showLevelClear() {
+    gameState = 'LEVEL_CLEAR';
+    document.getElementById('level-title').innerText = `Level ${currentLevel} Complete!`;
+    document.getElementById('level-desc').innerText = `You've collected ${totalTreats} treats so far! Keep going!`;
+    document.getElementById('level-screen').classList.remove('hidden');
+}
+
+function nextLevel() {
+    currentLevel++;
+    document.getElementById('level-screen').classList.add('hidden');
+    loadLevel(currentLevel);
+    gameState = 'PLAYING';
+}
+
+function showGameWin() {
+    gameState = 'WIN';
+    document.getElementById('end-title').innerText = `🐾 You Win! 🐾`;
+    document.getElementById('end-desc').innerText = `You helped the pug complete all 10 levels and collected a grand total of ${totalTreats} treats!`;
+    document.getElementById('end-screen').classList.remove('hidden');
+}
+
+function restartGame() {
+    startGame();
+}
+
+// Start Game Loop
+requestAnimationFrame(gameLoop);
+
+</script>
+</body>
+</html>
