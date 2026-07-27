@@ -912,7 +912,7 @@ function drawFinishLine() {
 // Guarantees exact same game speed on 60Hz, 144Hz, 240Hz, or laggy displays!
 let lastTime = performance.now();
 let accumulator = 0;
-const physicsStep = 1000 / 120; // Locked to 60 logic ticks per second (~16.67ms)
+const physicsStep = 1000 / 60; // Locked to 60 logic ticks per second (~16.67ms)
 
 function updateGameLogic() {
     if (gameState === 'PLAYING') {
