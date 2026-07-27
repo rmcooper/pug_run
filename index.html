@@ -205,9 +205,9 @@ const player = {
     h: 30,
     vx: 0,
     vy: 0,
-    speed: 3.0,          // Balanced speed
-    jumpPower: -8.8,     // tuned jump height for clear arc
-    gravity: 0.32,       // tuned floaty gravity
+    speed: 3.2,          
+    jumpPower: -9.2,     
+    gravity: 0.33,       
     grounded: false,
     facing: 'right',
     animFrame: 0,
@@ -295,26 +295,26 @@ const player = {
         const darkMaskColor = '#2c2523'; 
         const detailColor = '#b59a5b'; 
 
-        // 1. Body
+        // Body
         ctx.fillStyle = coatColor;
         ctx.beginPath();
         ctx.roundRect(-16, -8, 28, 18, 6);
         ctx.fill();
 
-        // 2. Legs
+        // Legs
         ctx.fillStyle = detailColor;
         let legOffset = this.animFrame === 1 ? 3 : 0;
         ctx.fillRect(-12 + legOffset, 8, 6, 8);
         ctx.fillRect(4 - legOffset, 8, 6, 8);
 
-        // 3. Curly Tail
+        // Curly Tail
         ctx.strokeStyle = detailColor;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(-16, -6, 4, 0, Math.PI * 1.5);
         ctx.stroke();
 
-        // 4. Integrated Head
+        // Integrated Head
         ctx.fillStyle = coatColor;
         ctx.beginPath();
         ctx.moveTo(-1, -6); 
@@ -325,19 +325,19 @@ const player = {
         ctx.closePath();
         ctx.fill();
 
-        // 5. Black Muzzle
+        // Black Muzzle
         ctx.fillStyle = darkMaskColor;
         ctx.beginPath();
         ctx.roundRect(8, -7, 10, 10, 4);
         ctx.fill();
 
-        // 6. Nose
+        // Nose
         ctx.fillStyle = '#000';
         ctx.beginPath();
         ctx.arc(16, -4, 1.8, 0, Math.PI * 2);
         ctx.fill();
 
-        // 7. Ears
+        // Ears
         ctx.fillStyle = darkMaskColor;
         ctx.beginPath();
         ctx.ellipse(3, -16, 4, 7, Math.PI / 5, 0, Math.PI * 2);
@@ -346,7 +346,7 @@ const player = {
         ctx.ellipse(11, -15, 3.5, 6, -Math.PI / 10, 0, Math.PI * 2);
         ctx.fill();
 
-        // 8. Eyes
+        // Eyes
         ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.arc(10, -11, 4, 0, Math.PI * 2);
@@ -369,14 +369,16 @@ class Chihuahua {
     constructor(x, y, patrolRange) {
         this.x = x;
         this.y = y;
-        this.w = 28;
-        this.h = 24;
+        this.w = 30;
+        this.h = 26;
         this.startX = x;
         this.patrolRange = patrolRange;
-        this.vx = 1.0; 
+        this.vx = 1.3; // Slightly faster patrol
         this.scared = false;
         this.vy = 0;
         this.barkTimer = Math.random() * 100;
+        this.animFrame = 0;
+        this.animTimer = 0;
     }
 
     update() {
@@ -393,6 +395,11 @@ class Chihuahua {
         }
 
         this.barkTimer++;
+
+        this.animTimer++;
+        if (this.animTimer % 8 === 0) {
+            this.animFrame = (this.animFrame + 1) % 2;
+        }
     }
 
     scareAway() {
@@ -411,44 +418,118 @@ class Chihuahua {
             ctx.scale(-1, 1);
         }
 
-        ctx.fillStyle = '#e0a96d';
+        const tanColor = '#e0a96d';
+        const blackCoat = '#252323';
+        const innerEarColor = '#f3a6a6';
+
+        // Tan Underbody
+        ctx.fillStyle = tanColor;
         ctx.beginPath();
         ctx.roundRect(-12, -6, 22, 14, 4);
         ctx.fill();
 
-        ctx.fillRect(-10, 8, 4, 6);
-        ctx.fillRect(4, 8, 4, 6);
-
+        // Black Saddle (Back)
+        ctx.fillStyle = blackCoat;
         ctx.beginPath();
-        ctx.arc(8, -8, 8, 0, Math.PI * 2);
+        ctx.roundRect(-12, -7, 18, 9, 3);
         ctx.fill();
 
+        // Legs
+        ctx.fillStyle = tanColor;
+        let legOff = (!this.scared && this.animFrame === 1) ? 3 : 0;
+        ctx.fillRect(-10 + legOff, 7, 4, 8);
+        ctx.fillRect(4 - legOff, 7, 4, 8);
+
+        // Tail
+        ctx.strokeStyle = blackCoat;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(4, -14);
-        ctx.lineTo(8, -24);
-        ctx.lineTo(12, -14);
+        ctx.moveTo(-12, -4);
+        ctx.lineTo(-17, -12);
+        ctx.stroke();
+
+        // Head
+        ctx.fillStyle = tanColor;
+        ctx.beginPath();
+        ctx.moveTo(0, -6);
+        ctx.quadraticCurveTo(2, -18, 10, -18);
+        ctx.quadraticCurveTo(16, -16, 17, -8);
+        ctx.quadraticCurveTo(15, 0, 8, 0);
+        ctx.closePath();
         ctx.fill();
 
+        // Black Crown
+        ctx.fillStyle = blackCoat;
         ctx.beginPath();
-        ctx.roundRect(12, -8, 6, 5, 2);
+        ctx.moveTo(1, -11);
+        ctx.quadraticCurveTo(2, -18, 10, -18);
+        ctx.quadraticCurveTo(15, -17, 15, -11);
+        ctx.closePath();
         ctx.fill();
 
-        ctx.fillStyle = this.scared ? '#e74c3c' : '#000';
+        // Ears
+        ctx.fillStyle = blackCoat;
         ctx.beginPath();
-        ctx.arc(10, -10, 2, 0, Math.PI * 2);
+        ctx.moveTo(2, -14);
+        ctx.lineTo(5, -26);
+        ctx.lineTo(11, -15);
         ctx.fill();
 
+        ctx.fillStyle = innerEarColor;
+        ctx.beginPath();
+        ctx.moveTo(4, -15);
+        ctx.lineTo(6, -23);
+        ctx.lineTo(9, -16);
+        ctx.fill();
+
+        // Snout & Nose
+        ctx.fillStyle = tanColor;
+        ctx.beginPath();
+        ctx.roundRect(12, -8, 7, 5, 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(18, -7, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye
+        if (this.scared) {
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(10, -10, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(10, -10, 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(10, -10, 3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(10.5, -10, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(11.2, -11, 0.7, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // WOOF!
         if (!this.scared && Math.floor(this.barkTimer / 30) % 2 === 0) {
             ctx.fillStyle = '#f1c40f';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.fillText('WOOF!', 10, -22);
+            ctx.font = 'bold 11px sans-serif';
+            ctx.fillText('WOOF!', 8, -25);
         }
 
         ctx.restore();
     }
 }
 
-// --- LEVEL GENERATION ---
+// --- MORE CHALLENGING LEVEL GENERATION ---
 function generateLevel() {
     platforms = [];
     treats = [];
@@ -456,54 +537,62 @@ function generateLevel() {
     currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
     let validEnemyPlatforms = [];
 
-    // Base Floor platforms with SAFE gap width logic
+    // Main level layout with shorter platforms & variable gaps
     let x = 0;
     while (x < levelWidth) {
-        let pWidth = 350 + Math.random() * 250;
-        if (x === 0) pWidth = 500; 
+        let pWidth = 200 + Math.random() * 200; // Shorter ground platforms
+        if (x === 0) pWidth = 450; // Safe starting zone
         
         let plat = { x: x, y: 380, w: pWidth, h: 70 };
         platforms.push(plat);
 
-        if (x > 500 && x < levelWidth - 500) {
+        if (x > 400 && x < levelWidth - 400) {
             validEnemyPlatforms.push(plat);
         }
 
-        // Spawn treats on main floor
-        for (let t = x + 80; t < x + pWidth - 40; t += 100) {
-            if (Math.random() > 0.3) {
+        // Treats on main floor
+        for (let t = x + 60; t < x + pWidth - 30; t += 90) {
+            if (Math.random() > 0.4) {
                 treats.push({ x: t, y: 340, collected: false, floatOffset: Math.random() * 10 });
             }
         }
 
-        // Floating platforms (Easier to reach)
-        if (x > 300 && x < levelWidth - 400) {
-            let platY = 270 + (Math.random() * 30 - 15); // Lowered so jumps reach cleanly
-            let platW = 140 + Math.random() * 80;
-            platforms.push({
-                x: x + 80,
-                y: platY,
-                w: platW,
-                h: 20
-            });
-            treats.push({ x: x + 80 + platW/2, y: platY - 35, collected: false, floatOffset: Math.random() * 10 });
+        // MULTI-TIER PLATFORMS (Adds vertical depth and precision jumping)
+        if (x > 250 && x < levelWidth - 400) {
+            // Tier 1 Floating Platform (Mid Height)
+            let midY = 280;
+            let midW = 100 + Math.random() * 80;
+            let midX = x + 30;
+            platforms.push({ x: midX, y: midY, w: midW, h: 20 });
+            treats.push({ x: midX + midW / 2, y: midY - 35, collected: false, floatOffset: Math.random() * 10 });
+
+            // Tier 2 Floating Platform (High Height - High Risk, High Reward!)
+            if (Math.random() > 0.4) {
+                let highY = 180;
+                let highW = 90 + Math.random() * 60;
+                let highX = midX + 40;
+                platforms.push({ x: highX, y: highY, w: highW, h: 20 });
+                // Double treats on high platforms
+                treats.push({ x: highX + 20, y: highY - 35, collected: false, floatOffset: Math.random() * 10 });
+                treats.push({ x: highX + highW - 20, y: highY - 35, collected: false, floatOffset: Math.random() * 10 });
+            }
         }
 
-        // Gap strictly capped between 70px and 110px (Very easily jumpable)
-        x += pWidth + (70 + Math.random() * 40); 
+        // More frequent, variable gaps (80px to 130px gap width)
+        x += pWidth + (80 + Math.random() * 50); 
     }
 
-    // Spawn Enemies
+    // Spawn Enemies on platforms
     let numEnemies = Math.floor(Math.random() * 3) + 1; 
     for (let i = 0; i < numEnemies; i++) {
         if (validEnemyPlatforms.length > 0) {
             let idx = Math.floor(Math.random() * validEnemyPlatforms.length);
             let targetPlat = validEnemyPlatforms.splice(idx, 1)[0];
-            enemies.push(new Chihuahua(targetPlat.x + 50, targetPlat.y - 24, targetPlat.w - 100));
+            enemies.push(new Chihuahua(targetPlat.x + 30, targetPlat.y - 26, targetPlat.w - 60));
         }
     }
 
-    // Finish Goal
+    // Goal
     finishLine = { x: levelWidth - 200, y: 300, w: 60, h: 80 };
     platforms.push({ x: levelWidth - 300, y: 380, w: 300, h: 70 });
 
