@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.20 -->
+    <!-- Version 1.0.21 -->
     <style>
         * {
             box-sizing: border-box;
@@ -746,8 +746,13 @@ function drawParallaxBackground() {
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
-            drawWinterMountains(0.10, '#17202a'); 
+            drawWinterMountains(0.10, '#10171e'); // High contrast dark mountains standing out through the haze
             drawParallaxTrees(0.22, '#2e7d32', true); 
+            
+            // Heavy Blizzard Snow Haze Layer over the tree line
+            ctx.fillStyle = 'rgba(220, 230, 242, 0.38)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
             drawSnowDrifts(0.35, '#e2e8f0'); 
             drawSecondaryGround(0.5, '#2c3e50'); 
             
@@ -795,9 +800,10 @@ function drawParallaxBackground() {
     }
 
     // --- UNIVERSAL ATMOSPHERIC HAZE LAYER ---
-    // Softens background contrast so action elements pop clearly in the foreground
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (currentTheme !== 'WINTER') {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 }
 
 // --- PARALLAX HELPER FUNCTIONS ---
@@ -862,17 +868,14 @@ function drawWinterMountains(factor, color) {
     ctx.moveTo(-spacing, canvas.height);
     for (let x = -spacing; x < canvas.width + spacing * 2; x += spacing) {
         let rx = x - offset;
-        ctx.lineTo(rx + spacing * 0.25, 90);
-        ctx.lineTo(rx + spacing * 0.45, 150);
-        ctx.lineTo(rx + spacing * 0.65, 70);
-        ctx.lineTo(rx + spacing * 0.85, 130);
+        ctx.lineTo(rx + spacing * 0.25, 80);
+        ctx.lineTo(rx + spacing * 0.45, 140);
+        ctx.lineTo(rx + spacing * 0.65, 60);
+        ctx.lineTo(rx + spacing * 0.85, 120);
         ctx.lineTo(rx + spacing, canvas.height);
     }
     ctx.closePath();
     ctx.fill();
-
-    ctx.fillStyle = 'rgba(236, 240, 241, 0.15)';
-    ctx.fillRect(0, 50, canvas.width, canvas.height - 50);
 }
 
 function drawSnowDrifts(factor, color) {
@@ -929,8 +932,8 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
         let treeWidth = 30 + (Math.abs(Math.cos(treeIdx * 4.7)) * 20);
         let topY = groundY - treeHeight;
 
-        // Trunk
-        ctx.fillStyle = '#4a2e1b';
+        // Trunk - slightly translucent during snow for atmospheric haze depth
+        ctx.fillStyle = hasSnow ? 'rgba(74, 46, 27, 0.45)' : '#4a2e1b';
         ctx.fillRect(rx + (treeWidth / 2) - 4, topY, 8, bottomY - topY);
 
         // Tiered Foliage
@@ -957,6 +960,15 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
                 ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.8), tierY + 23);
                 ctx.lineTo(rx + treeWidth / 2, tierY - 12);
                 ctx.lineTo(rx + (treeWidth / 2) - (tierWidth / 2.8), tierY + 23);
+                ctx.closePath();
+                ctx.fill();
+
+                // Tree haze overlay to soften the green foliage into the snow storm
+                ctx.fillStyle = 'rgba(236, 240, 241, 0.28)';
+                ctx.beginPath();
+                ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2), tierY + 30);
+                ctx.lineTo(rx + treeWidth / 2, tierY - 25);
+                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2), tierY + 30);
                 ctx.closePath();
                 ctx.fill();
             }
@@ -1410,7 +1422,7 @@ function nextLevel() {
 function showGameOver() {
     gameState = 'GAME_OVER';
     document.getElementById('end-desc').innerText = `You ran out of lives! Total treats banked: ${totalTreats}`;
-    document.getElementById('end-screen').classList.add('hidden');
+    document.getElementById('end-screen').classList.remove('hidden');
 }
 
 function restartGame() {
