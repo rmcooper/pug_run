@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pug Run: Endless Treat Collector</title>
-    <!-- Version 1.1.0 -->
+    <title>Pug Run: Enhanced Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,7 +12,7 @@
         }
 
         body {
-            background-color: #1a1a1a;
+            background-color: #121212;
             color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
@@ -24,19 +23,19 @@
             overflow: hidden;
         }
 
-        #game-container {
+        #game-wrapper {
             position: relative;
             width: 800px;
             height: 450px;
-            border: 4px solid #fff;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border-radius: 12px;
             overflow: hidden;
-            background: #000;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6), 0 0 10px rgba(255, 255, 255, 0.1);
+            border: 2px solid #333;
         }
 
         canvas {
             display: block;
+            background: #000;
         }
 
         #ui-layer {
@@ -49,15 +48,26 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 15px;
+            padding: 20px;
         }
 
         .hud {
             display: flex;
             justify-content: space-between;
-            font-size: 20px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-size: 22px;
+            font-weight: 800;
+            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .hud > div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .overlay {
@@ -66,47 +76,63 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             pointer-events: auto;
             text-align: center;
-            padding: 20px;
+            padding: 30px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         .overlay h1 {
-            font-size: 42px;
+            font-size: 48px;
             color: #f1c40f;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 15px;
+            text-shadow: 3px 3px 0 #000;
+            letter-spacing: -1px;
         }
 
         .overlay p {
             font-size: 18px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             max-width: 500px;
-            line-height: 1.4;
+            line-height: 1.6;
+            color: #e0e0e0;
         }
 
         .btn {
-            background: #2ecc71;
+            background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%);
             color: #fff;
             border: none;
-            padding: 12px 30px;
+            padding: 14px 35px;
             font-size: 20px;
             font-weight: bold;
-            border-radius: 25px;
+            border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 4px 0 #27ae60;
+            box-shadow: 0 6px 0 #1e8449, 0 10px 10px rgba(0,0,0,0.3);
             transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .btn:hover {
-            background: #27ae60;
             transform: translateY(2px);
-            box-shadow: 0 2px 0 #1e8449;
+            box-shadow: 0 4px 0 #1e8449, 0 6px 6px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, #3ae77f 0%, #2ecc71 100%);
+        }
+
+        .btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #1e8449, 0 0 0 rgba(0,0,0,0.3);
         }
 
         .hidden {
@@ -114,37 +140,40 @@
         }
 
         .controls-hint {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #ccc;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #888;
+            background: rgba(255,255,255,0.05);
+            padding: 5px 15px;
+            border-radius: 15px;
         }
     </style>
 </head>
 <body>
 
-<div id="game-container">
+<div id="game-wrapper">
     <canvas id="gameCanvas" width="800" height="450"></canvas>
     
     <div id="ui-layer">
         <div class="hud">
-            <div id="treat-count">🦴 Treats: 0</div>
-            <div id="lives-display">❤️ Lives: 5</div>
-            <div id="level-display">Level 1</div>
+            <div id="treat-count">🦴 <span>0</span></div>
+            <div id="level-display">LVL 1</div>
+            <div id="lives-display">❤️ <span>5</span></div>
         </div>
     </div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
         <h1>Pug Run!</h1>
-        <p>Help the little pug collect treats and scare away feisty Chihuahuas across infinite randomized levels!</p>
-        <button class="btn" onclick="startGame()">Start Game</button>
+        <p>Explore beautiful worlds, collect treats, and bounce on Chihuahuas in this endless adventure.</p>
+        <button class="btn" onclick="startGame()">Start Adventure</button>
         <div class="controls-hint">Controls: Arrow Keys / WASD to move & jump</div>
     </div>
 
     <!-- Level Complete Screen -->
     <div id="level-screen" class="overlay hidden">
         <h1 id="level-title">Level Cleared!</h1>
-        <p id="level-desc">Great job! Get ready for the next area.</p>
+        <p id="level-desc">Beautiful scenery! Get ready for the next area.</p>
         <button class="btn" onclick="nextLevel()">Next Level</button>
     </div>
 
@@ -200,8 +229,95 @@ let heartPickup = null;
 let enemies = [];
 let finishLine = { x: 0, y: 0, w: 40, h: 80 };
 
-// Atmospheric Particles
+// --- PARTICLE SYSTEM ---
 let particles = [];
+
+class Particle {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.life = 1.0;
+        
+        if (type === 'dust') {
+            this.vx = (Math.random() - 0.5) * 2;
+            this.vy = (Math.random() - 0.5) * 2 - 1;
+            this.size = Math.random() * 3 + 1;
+            this.color = `rgba(255, 255, 255,`;
+        } else if (type === 'snow') {
+            // Background snow
+            this.vx = (Math.random() - 0.5) * 1;
+            this.vy = Math.random() * 2 + 1;
+            this.size = Math.random() * 4 + 2;
+            this.color = `rgba(255, 255, 255,`;
+        } else if (type === 'deep_snow') {
+            // Foreground snow: larger, slower, more transparent
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = Math.random() * 1.5 + 0.5; // Slower fall
+            this.size = Math.random() * 6 + 4;
+            this.color = `rgba(255, 255, 255,`;
+            this.life = 1.0; // Lasts longer
+        } else if (type === 'sparkle') {
+            this.vx = (Math.random() - 0.5) * 4;
+            this.vy = (Math.random() - 0.5) * 4;
+            this.size = Math.random() * 4 + 2;
+            this.color = '#f1c40f';
+            this.life = 0.6;
+        } else if (type === 'firefly') {
+            this.vx = (Math.random() - 0.5) * 1.5;
+            this.vy = (Math.random() - 0.5) * 1.5;
+            this.size = Math.random() * 3 + 2;
+            this.color = '#f1c40f';
+            this.life = 0.8;
+            this.wanderTimer = Math.random() * 100;
+        }
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.015;
+        
+        if (this.type === 'snow') {
+            this.vx += Math.sin(Date.now() * 0.001 + this.x) * 0.01;
+        }
+        
+        if (this.type === 'deep_snow') {
+            this.vx += Math.sin(Date.now() * 0.002 + this.x * 0.1) * 0.02;
+            // Reset if off screen
+            if (this.y > canvas.height + 20) this.y = -20;
+        }
+
+        if (this.type === 'firefly') {
+            this.wanderTimer++;
+            if (this.wanderTimer % 60 === 0) {
+                this.vx = (Math.random() - 0.5) * 2;
+                this.vy = (Math.random() - 0.5) * 2;
+            }
+            // Twinkle effect
+            if (Math.random() > 0.9) this.life = 0.8; 
+        }
+    }
+
+    draw() {
+        if (this.type === 'sparkle' || this.type === 'firefly') {
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = this.life;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = this.color;
+            ctx.beginPath();
+            ctx.arc(this.x - cameraX, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1.0;
+        } else {
+            ctx.fillStyle = this.color + this.life + ')';
+            ctx.beginPath();
+            ctx.arc(this.x - cameraX, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
 
 // --- PLAYER (PUG) ---
 const player = {
@@ -212,13 +328,14 @@ const player = {
     vx: 0,
     vy: 0,
     speed: 8.5,
-    jumpPower: -11.5,
+    jumpPower: -13.5,
     gravity: 0.55,
     grounded: false,
     facing: 'right',
     animFrame: 0,
     animTimer: 0,
     invincibleTimer: 0,
+    dustTimer: 0,
 
     reset(x, y) {
         this.x = x;
@@ -227,11 +344,13 @@ const player = {
         this.vy = 0;
         this.grounded = false;
         this.invincibleTimer = 60; 
+        particles = [];
     },
 
     update() {
         if (this.invincibleTimer > 0) this.invincibleTimer--;
 
+        // Movement
         if (keys.left) {
             this.vx = -this.speed;
             this.facing = 'left';
@@ -245,16 +364,24 @@ const player = {
         if (keys.up && this.grounded) {
             this.vy = this.jumpPower;
             this.grounded = false;
+            // Add dust on jump
+            for(let i=0; i<5; i++) {
+                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust'));
+            }
         }
 
+        // Apply Gravity
         this.vy += this.gravity;
 
+        // X Position & Collision
         this.x += this.vx;
         if (this.x < 0) this.x = 0;
 
+        // Y Position & Collision
         this.y += this.vy;
         this.grounded = false;
 
+        // Platform Collisions
         platforms.forEach(p => {
             if (this.x + this.w > p.x && 
                 this.x < p.x + p.w && 
@@ -267,17 +394,25 @@ const player = {
             }
         });
 
+        // Bottom Boundary
         if (this.y > canvas.height + 100) {
             loseLife();
         }
 
+        // Animation timing
         if (Math.abs(this.vx) > 0.2 && this.grounded) {
             this.animTimer++;
             if (this.animTimer % 12 === 0) {
                 this.animFrame = (this.animFrame + 1) % 2;
             }
+            // Run dust
+            this.dustTimer++;
+            if (this.dustTimer % 5 === 0) {
+                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust'));
+            }
         } else {
             this.animFrame = 0;
+            this.dustTimer = 0;
         }
     },
 
@@ -294,22 +429,26 @@ const player = {
         const darkMaskColor = '#2c2523'; 
         const detailColor = '#b59a5b'; 
 
+        // Body
         ctx.fillStyle = coatColor;
         ctx.beginPath();
         ctx.roundRect(-16, -8, 28, 18, 6);
         ctx.fill();
 
+        // Legs
         ctx.fillStyle = detailColor;
         let legOffset = this.animFrame === 1 ? 3 : 0;
         ctx.fillRect(-12 + legOffset, 8, 6, 8);
         ctx.fillRect(4 - legOffset, 8, 6, 8);
 
+        // Curly Tail
         ctx.strokeStyle = detailColor;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(-16, -6, 4, 0, Math.PI * 1.5);
         ctx.stroke();
 
+        // Integrated Head
         ctx.fillStyle = coatColor;
         ctx.beginPath();
         ctx.moveTo(-1, -6); 
@@ -320,16 +459,19 @@ const player = {
         ctx.closePath();
         ctx.fill();
 
+        // Black Muzzle
         ctx.fillStyle = darkMaskColor;
         ctx.beginPath();
         ctx.roundRect(8, -7, 10, 10, 4);
         ctx.fill();
 
+        // Nose
         ctx.fillStyle = '#000';
         ctx.beginPath();
         ctx.arc(16, -4, 1.8, 0, Math.PI * 2);
         ctx.fill();
 
+        // Ears
         ctx.fillStyle = darkMaskColor;
         ctx.beginPath();
         ctx.ellipse(3, -16, 4, 7, Math.PI / 5, 0, Math.PI * 2);
@@ -338,6 +480,7 @@ const player = {
         ctx.ellipse(11, -15, 3.5, 6, -Math.PI / 10, 0, Math.PI * 2);
         ctx.fill();
 
+        // Eyes
         ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.arc(10, -11, 4, 0, Math.PI * 2);
@@ -413,21 +556,25 @@ class Chihuahua {
         const blackCoat = '#252323';
         const innerEarColor = '#f3a6a6';
 
+        // Tan Underbody
         ctx.fillStyle = tanColor;
         ctx.beginPath();
         ctx.roundRect(-12, -6, 22, 14, 4);
         ctx.fill();
 
+        // Black Saddle
         ctx.fillStyle = blackCoat;
         ctx.beginPath();
         ctx.roundRect(-12, -7, 18, 9, 3);
         ctx.fill();
 
+        // Legs
         ctx.fillStyle = tanColor;
         let legOff = (!this.scared && this.animFrame === 1) ? 3 : 0;
         ctx.fillRect(-10 + legOff, 7, 4, 8);
         ctx.fillRect(4 - legOff, 7, 4, 8);
 
+        // Tail
         ctx.strokeStyle = blackCoat;
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -435,6 +582,7 @@ class Chihuahua {
         ctx.lineTo(-17, -12);
         ctx.stroke();
 
+        // Head
         ctx.fillStyle = tanColor;
         ctx.beginPath();
         ctx.moveTo(0, -6);
@@ -444,6 +592,7 @@ class Chihuahua {
         ctx.closePath();
         ctx.fill();
 
+        // Black Crown
         ctx.fillStyle = blackCoat;
         ctx.beginPath();
         ctx.moveTo(1, -11);
@@ -452,6 +601,7 @@ class Chihuahua {
         ctx.closePath();
         ctx.fill();
 
+        // Ears
         ctx.fillStyle = blackCoat;
         ctx.beginPath();
         ctx.moveTo(2, -14);
@@ -466,6 +616,7 @@ class Chihuahua {
         ctx.lineTo(9, -16);
         ctx.fill();
 
+        // Snout & Nose
         ctx.fillStyle = tanColor;
         ctx.beginPath();
         ctx.roundRect(12, -8, 7, 5, 2);
@@ -476,6 +627,7 @@ class Chihuahua {
         ctx.arc(18, -7, 1.2, 0, Math.PI * 2);
         ctx.fill();
 
+        // Eye
         if (this.scared) {
             ctx.fillStyle = '#fff';
             ctx.beginPath();
@@ -500,6 +652,7 @@ class Chihuahua {
             ctx.fill();
         }
 
+        // WOOF!
         if (!this.scared && Math.floor(this.barkTimer / 30) % 2 === 0) {
             ctx.fillStyle = '#f1c40f';
             ctx.font = 'bold 11px sans-serif';
@@ -510,458 +663,243 @@ class Chihuahua {
     }
 }
 
-// --- ENHANCED PARALLAX SYSTEM ---
-let bgLayers = [];
-let stars = [];
-let snowflakes = [];
-let fireflies = [];
-let clouds = [];
-
-function initAtmosphere() {
-    stars = [];
-    for(let i=0; i<100; i++) {
-        stars.push({
-            x: Math.random() * levelWidth,
-            y: Math.random() * canvas.height * 0.6,
-            size: Math.random() * 2 + 0.5,
-            twinkle: Math.random() * Math.PI * 2
-        });
-    }
-
-    snowflakes = [];
-    for(let i=0; i<150; i++) {
-        snowflakes.push({
-            x: Math.random() * levelWidth,
-            y: Math.random() * canvas.height,
-            speed: Math.random() * 1.5 + 0.5,
-            size: Math.random() * 3 + 1,
-            drift: Math.random() * 2 - 1
-        });
-    }
-
-    fireflies = [];
-    for(let i=0; i<40; i++) {
-        fireflies.push({
-            x: Math.random() * levelWidth,
-            y: Math.random() * canvas.height * 0.8 + 50,
-            phase: Math.random() * Math.PI * 2,
-            speed: Math.random() * 0.5 + 0.2
-        });
-    }
-
-    clouds = [];
-    for(let i=0; i<8; i++) {
-        clouds.push({
-            x: Math.random() * levelWidth,
-            y: Math.random() * canvas.height * 0.4 + 20,
-            w: Math.random() * 100 + 60,
-            h: Math.random() * 40 + 20,
-            speed: Math.random() * 0.2 + 0.1
-        });
-    }
-}
-
-function generateLayers() {
-    bgLayers = [];
-    
-    switch(currentTheme) {
-        case 'SUNNY':
-            bgLayers.push({ factor: 0.05, draw: drawDistantHillsLayer1 });
-            bgLayers.push({ factor: 0.1, draw: drawDistantHillsLayer2 });
-            bgLayers.push({ factor: 0.15, draw: drawDistantHillsLayer3 });
-            bgLayers.push({ factor: 0.25, draw: drawForegroundHills });
-            bgLayers.push({ factor: 0.4, draw: drawCloudsLayer });
-            break;
-        case 'JUNGLE':
-            bgLayers.push({ factor: 0.05, draw: drawDistantMountainsLayer1 });
-            bgLayers.push({ factor: 0.1, draw: drawDistantMountainsLayer2 });
-            bgLayers.push({ factor: 0.2, draw: drawDistantMountainsLayer3 });
-            bgLayers.push({ factor: 0.35, draw: drawCanopyLayer });
-            bgLayers.push({ factor: 0.5, draw: drawFirefliesLayer });
-            break;
-        case 'WINTER':
-            bgLayers.push({ factor: 0.05, draw: drawSnowyMountainsLayer1 });
-            bgLayers.push({ factor: 0.1, draw: drawSnowyMountainsLayer2 });
-            bgLayers.push({ factor: 0.15, draw: drawSnowyMountainsLayer3 });
-            bgLayers.push({ factor: 0.25, draw: drawBareTreesLayer });
-            bgLayers.push({ factor: 0.6, draw: drawSnowLayer });
-            break;
-        case 'CITY_NIGHT':
-            bgLayers.push({ factor: 0.05, draw: drawSkylineLayer1 });
-            bgLayers.push({ factor: 0.1, draw: drawSkylineLayer2 });
-            bgLayers.push({ factor: 0.15, draw: drawSkylineLayer3 });
-            bgLayers.push({ factor: 0.3, draw: drawLitWindowsLayer });
-            bgLayers.push({ factor: 0.0, draw: drawStarsLayer });
-            break;
-        case 'CITY_DAY':
-            bgLayers.push({ factor: 0.05, draw: drawSkylineDayLayer1 });
-            bgLayers.push({ factor: 0.1, draw: drawSkylineDayLayer2 });
-            bgLayers.push({ factor: 0.15, draw: drawSkylineDayLayer3 });
-            bgLayers.push({ factor: 0.2, draw: drawStreetLevel });
-            bgLayers.push({ factor: 0.4, draw: drawCloudsLayer });
-            break;
-    }
-}
-
-// --- THEME SPECIFIC LAYER DRAWING FUNCTIONS ---
-
-function drawDistantHillsLayer1(offset) {
-    ctx.fillStyle = '#a8e6cf';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 300 + Math.sin((x + offset) / 300) * 40;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawDistantHillsLayer2(offset) {
-    ctx.fillStyle = '#78e08f';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 320 + Math.sin((x + offset) / 200) * 50;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawDistantHillsLayer3(offset) {
-    ctx.fillStyle = '#38ada9';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 340 + Math.sin((x + offset) / 150) * 60;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawForegroundHills(offset) {
-    ctx.fillStyle = '#079992';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 360 + Math.sin((x + offset) / 100) * 40;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawCloudsLayer(offset) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    clouds.forEach(c => {
-        let cx = (c.x - offset * 0.5) % (canvas.width + 200);
-        if (cx < -100) cx += canvas.width + 200;
-        ctx.beginPath();
-        ctx.arc(cx, c.y, c.h, 0, Math.PI * 2);
-        ctx.arc(cx + c.w * 0.3, c.y - c.h * 0.2, c.h * 0.8, 0, Math.PI * 2);
-        ctx.arc(cx + c.w * 0.6, c.y, c.h * 0.9, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
-function drawDistantMountainsLayer1(offset) {
-    ctx.fillStyle = '#1e3c72';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 250 + Math.sin((x + offset) / 400) * 80;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawDistantMountainsLayer2(offset) {
-    ctx.fillStyle = '#2a5298';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 280 + Math.sin((x + offset) / 300) * 70;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawDistantMountainsLayer3(offset) {
-    ctx.fillStyle = '#3b1c5b';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 300 + Math.sin((x + offset) / 200) * 60;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawCanopyLayer(offset) {
-    ctx.fillStyle = '#0b382d';
-    for(let x = -200; x < canvas.width + 200; x += 150) {
-        let rx = x - (offset * 0.35);
-        ctx.beginPath();
-        ctx.arc(rx, 280, 80, 0, Math.PI * 2);
-        ctx.arc(rx + 60, 260, 90, 0, Math.PI * 2);
-        ctx.arc(rx + 120, 280, 70, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-function drawFirefliesLayer(offset) {
-    ctx.fillStyle = '#f1c40f';
-    let time = Date.now() * 0.001;
-    fireflies.forEach(f => {
-        let fx = (f.x - offset * 0.5) % (canvas.width + 200);
-        if (fx < -100) fx += canvas.width + 200;
-        let fy = f.y + Math.sin(time * f.speed + f.phase) * 10;
-        ctx.globalAlpha = 0.6 + Math.sin(time * 2 + f.phase) * 0.4;
-        ctx.beginPath();
-        ctx.arc(fx, fy, 2, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1.0;
-}
-
-function drawSnowyMountainsLayer1(offset) {
-    ctx.fillStyle = '#7f8c8d';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 200 + Math.sin((x + offset) / 500) * 100;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawSnowyMountainsLayer2(offset) {
-    ctx.fillStyle = '#bdc3c7';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 250 + Math.sin((x + offset) / 400) * 90;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawSnowyMountainsLayer3(offset) {
-    ctx.fillStyle = '#ecf0f1';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 300 + Math.sin((x + offset) / 300) * 80;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawBareTreesLayer(offset) {
-    ctx.fillStyle = '#2c3e50';
-    for(let x = -100; x < canvas.width + 100; x += 120) {
-        let rx = x - (offset * 0.25);
-        ctx.fillRect(rx, 250, 10, 100);
-        ctx.beginPath();
-        ctx.moveTo(rx + 5, 280);
-        ctx.lineTo(rx - 15, 300);
-        ctx.lineTo(rx + 5, 290);
-        ctx.lineTo(rx + 25, 310);
-        ctx.lineTo(rx + 5, 300);
-        ctx.fill();
-    }
-}
-
-function drawSnowLayer(offset) {
-    ctx.fillStyle = '#fff';
-    snowflakes.forEach(s => {
-        let sx = (s.x - offset * 0.6) % (canvas.width + 100);
-        if (sx < -50) sx += canvas.width + 100;
-        let sy = (s.y + s.speed) % canvas.height;
-        let drift = Math.sin(Date.now() * 0.001 + s.x) * s.drift;
-        ctx.beginPath();
-        ctx.arc(sx + drift, sy, s.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
-function drawSkylineLayer1(offset) {
-    ctx.fillStyle = '#0f2027';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 350 + Math.sin((x + offset) / 200) * 50;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawSkylineLayer2(offset) {
-    ctx.fillStyle = '#203a43';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 360 + Math.sin((x + offset) / 150) * 40;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawSkylineLayer3(offset) {
-    ctx.fillStyle = '#2c3e50';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 370 + Math.sin((x + offset) / 100) * 30;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawLitWindowsLayer(offset) {
-    ctx.fillStyle = '#f1c40f';
-    let time = Date.now() * 0.001;
-    for(let x = -100; x < canvas.width + 100; x += 60) {
-        let rx = x - (offset * 0.3);
-        let seed = Math.abs(Math.sin(x * 12.9898) * 43758.5453);
-        let seed2 = Math.abs(Math.cos(x * 78.233) * 23421.631);
-        for(let wy = 300; wy < canvas.height - 50; wy += 25) {
-            if (Math.floor(seed + wy * 0.1) % 3 !== 0) {
-                let flicker = Math.sin(time * 2 + wy + x) > 0.8 ? 1 : 0.3;
-                ctx.globalAlpha = flicker;
-                ctx.fillRect(rx + 10, wy, 8, 12);
-            }
-        }
-    }
-    ctx.globalAlpha = 1.0;
-}
-
-function drawStarsLayer(offset) {
-    ctx.fillStyle = '#fff';
-    let time = Date.now() * 0.001;
-    stars.forEach(s => {
-        let sx = (s.x - offset * 0.02) % (canvas.width + 100);
-        if (sx < -50) sx += canvas.width + 100;
-        let twinkle = 0.5 + Math.sin(time * 3 + s.twinkle) * 0.5;
-        ctx.globalAlpha = twinkle;
-        ctx.beginPath();
-        ctx.arc(sx, s.y, s.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
-    ctx.globalAlpha = 1.0;
-}
-
-function drawSkylineDayLayer1(offset) {
-    ctx.fillStyle = '#3498db';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 350 + Math.sin((x + offset) / 200) * 50;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawSkylineDayLayer2(offset) {
-    ctx.fillStyle = '#2980b9';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 360 + Math.sin((x + offset) / 150) * 40;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawSkylineDayLayer3(offset) {
-    ctx.fillStyle = '#1f618d';
-    ctx.beginPath();
-    ctx.moveTo(-50, canvas.height);
-    for(let x = -50; x <= canvas.width + 50; x += 10) {
-        let y = 370 + Math.sin((x + offset) / 100) * 30;
-        ctx.lineTo(x, y);
-    }
-    ctx.lineTo(canvas.width + 50, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function drawStreetLevel(offset) {
-    ctx.fillStyle = '#7f8c8d';
-    ctx.fillRect(-50, canvas.height - 20, canvas.width + 100, 20);
-    ctx.fillStyle = '#95a5a6';
-    ctx.fillRect(-50, canvas.height - 25, canvas.width + 100, 5);
-}
-
-// --- MAIN BACKGROUND DRAWING ---
+// --- MULTI-LAYER PARALLAX BACKGROUND DRAWING ---
 function drawParallaxBackground() {
     let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     
     switch (currentTheme) {
         case 'SUNNY':
-            bgGradient.addColorStop(0, '#70c5ce');
-            bgGradient.addColorStop(1, '#cce8e4');
+            bgGradient.addColorStop(0, '#4facfe');
+            bgGradient.addColorStop(1, '#00f2fe');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
+            
+            // Sun
+            ctx.fillStyle = '#fff7b1'; 
+            ctx.shadowBlur = 50; ctx.shadowColor = '#f1c40f';
+            ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            
+            drawClouds(0.1, '#ffffff');
+            drawDistantHills(0.18, '#81c784', 220, 45, 600);
+            drawDistantHills(0.35, '#4caf50', 280, 35, 400);
             break;
+
         case 'JUNGLE':
-            bgGradient.addColorStop(0, '#134e5e');
-            bgGradient.addColorStop(1, '#71b280');
+            bgGradient.addColorStop(0, '#0f2027');
+            bgGradient.addColorStop(0.5, '#203a43');
+            bgGradient.addColorStop(1, '#2c5364');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawDistantMountains(0.1, '#114136', 200, 400);
+            drawDistantMountains(0.2, '#195b4e', 260, 300);
+            drawJungleCanopy(0.3, '#0b382d');
+            
+            // Fireflies
+            if (Math.random() > 0.98) {
+                particles.push(new Particle(Math.random() * canvas.width + cameraX, Math.random() * canvas.height * 0.8, 'firefly'));
+            }
             break;
+
         case 'WINTER':
             bgGradient.addColorStop(0, '#1c2833');
             bgGradient.addColorStop(1, '#4a6572');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawDistantMountains(0.1, '#7f8c8d', 180, 400);
+            drawClouds(0.15, 'rgba(255, 255, 255, 0.1)'); // Very transparent clouds
+            drawDistantMountains(0.2, '#bdc3c7', 250, 300);
+            drawPineTrees(0.3, '#2c3e50');
+            
+            // Snow Particles (Background)
+            if (Math.random() > 0.7) {
+                particles.push(new Particle(cameraX + Math.random() * canvas.width, -10, 'snow'));
+            }
+            // Deep Snow Particles (Foreground)
+            if (Math.random() > 0.6) {
+                particles.push(new Particle(cameraX + Math.random() * canvas.width, -20, 'deep_snow'));
+            }
             break;
+
         case 'CITY_NIGHT':
             bgGradient.addColorStop(0, '#0f2027');
             bgGradient.addColorStop(1, '#203a43');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Stars (Behind everything)
+            ctx.fillStyle = '#fff';
+            for(let i=0; i<60; i++) {
+                let sx = (Math.sin(i * 132) * 10000) % canvas.width;
+                let sy = (Math.cos(i * 456) * 10000) % (canvas.height * 0.6);
+                if (sx < 0) sx += canvas.width;
+                if (sy < 0) sy += canvas.height * 0.6;
+                ctx.fillRect(sx, sy, 1.5, 1.5);
+            }
+
             ctx.fillStyle = '#f5f6fa'; ctx.beginPath(); ctx.arc(150, 70, 30, 0, Math.PI * 2); ctx.fill();
+            
+            // Dark Clouds (Stars show through)
+            drawClouds(0.15, 'rgba(20, 30, 40, 0.6)');
+            
+            drawSkyline(0.15, '#111923', false, 120);
+            drawSkyline(0.3, '#1c2833', true, 200);
             break;
+
         case 'CITY_DAY':
-            bgGradient.addColorStop(0, '#f39c12');
-            bgGradient.addColorStop(1, '#f1c40f');
+            // Twilight sky to allow stars to show through clouds
+            bgGradient.addColorStop(0, '#2c3e50');
+            bgGradient.addColorStop(0.5, '#4ca1af');
+            bgGradient.addColorStop(1, '#c4e0e5');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#f1c40f'; ctx.beginPath(); ctx.arc(100, 80, 45, 0, Math.PI * 2); ctx.fill();
+
+            // Stars (Behind clouds)
+            ctx.fillStyle = '#fff';
+            for(let i=0; i<40; i++) {
+                let sx = (Math.sin(i * 132) * 10000) % canvas.width;
+                let sy = (Math.cos(i * 456) * 10000) % (canvas.height * 0.7);
+                if (sx < 0) sx += canvas.width;
+                if (sy < 0) sy += canvas.height * 0.7;
+                ctx.fillRect(sx, sy, 1.5, 1.5);
+            }
+
+            // Semi-transparent Clouds
+            drawClouds(0.2, 'rgba(255, 255, 255, 0.4)');
+            
+            drawSkyline(0.15, '#5d768d', false, 100);
+            drawSkyline(0.3, '#3f5166', true, 180);
             break;
     }
+}
 
-    bgLayers.forEach(layer => {
-        layer.draw(cameraX * layer.factor);
-    });
+// --- PARALLAX HELPER FUNCTIONS ---
+
+function drawClouds(factor, color) {
+    ctx.fillStyle = color;
+    let loopWidth = 600;
+    let offset = (cameraX * factor) % loopWidth;
+    for (let x = -loopWidth; x < canvas.width + loopWidth; x += 300) {
+        let rx = x - offset;
+        ctx.beginPath();
+        ctx.arc(rx, 100, 25, 0, Math.PI * 2); 
+        ctx.arc(rx + 25, 90, 35, 0, Math.PI * 2); 
+        ctx.arc(rx + 55, 100, 25, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor);
+    
+    ctx.beginPath();
+    ctx.moveTo(-50, canvas.height);
+    
+    for (let x = -50; x <= canvas.width + 50; x += 10) {
+        let worldX = x + offset;
+        let y = baseY + Math.sin(worldX / wavelength * Math.PI * 2) * amplitude;
+        ctx.lineTo(x, y);
+    }
+    
+    ctx.lineTo(canvas.width + 50, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawDistantMountains(factor, color, peakY, spacing) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % spacing;
+    
+    ctx.beginPath();
+    ctx.moveTo(-spacing, canvas.height);
+    for (let x = -spacing; x < canvas.width + spacing * 2; x += spacing) {
+        let rx = x - offset;
+        ctx.lineTo(rx + spacing / 2, peakY);
+        ctx.lineTo(rx + spacing, canvas.height);
+    }
+    ctx.closePath();
+    ctx.fill();
+}
+
+function drawJungleCanopy(factor, color) {
+    ctx.fillStyle = color;
+    let loopWidth = 400;
+    let offset = (cameraX * factor) % loopWidth;
+
+    for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += loopWidth) {
+        let rx = x - offset;
+        
+        ctx.fillRect(rx - 10, 280, 120, canvas.height - 280);
+        ctx.fillRect(rx + 95, 260, 170, canvas.height - 260);
+        ctx.fillRect(rx + 245, 285, 130, canvas.height - 285);
+
+        ctx.beginPath();
+        ctx.arc(rx + 50, 280, 60, 0, Math.PI * 2);
+        ctx.arc(rx + 180, 260, 85, 0, Math.PI * 2);
+        ctx.arc(rx + 310, 285, 65, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawPineTrees(factor, color) {
+    ctx.fillStyle = color;
+    let loopWidth = 360;
+    let offset = (cameraX * factor) % loopWidth;
+    for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += 90) {
+        let rx = x - offset;
+        ctx.beginPath();
+        ctx.moveTo(rx, canvas.height);
+        ctx.lineTo(rx + 25, 220);
+        ctx.lineTo(rx + 50, canvas.height);
+        ctx.fill();
+    }
+}
+
+function drawSkyline(factor, color, showLights, heightScale) {
+    ctx.fillStyle = color;
+    let buildingWidth = 80;
+    let loopWidth = buildingWidth * 8;
+    let offset = (cameraX * factor) % loopWidth;
+
+    for (let x = -loopWidth; x < canvas.width + loopWidth; x += buildingWidth) {
+        let rx = x - offset;
+        let worldX = Math.floor((rx + cameraX * factor) / buildingWidth);
+        let h = heightScale + (Math.sin(worldX * 1.5) * 60);
+
+        // Building Body
+        ctx.fillRect(rx, canvas.height - h, 65, h);
+        
+        // Building Highlight (Day) or Shadow (Night)
+        if (currentTheme === 'CITY_DAY') {
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(rx, canvas.height - h, 65, h);
+            ctx.fillStyle = color; // Reset
+        } else if (currentTheme === 'CITY_NIGHT') {
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(rx, canvas.height - h, 10, h); // Side shadow
+            ctx.fillStyle = color; // Reset
+        }
+
+        // Windows
+        if (showLights) {
+            ctx.fillStyle = '#f1c40f';
+            let col = 0;
+            for (let wx = rx + 8; wx < rx + 50; wx += 15) {
+                let row = 0;
+                for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
+                    let windowId = Math.abs(worldX * 17 + col * 7 + row * 13);
+                    if (windowId % 3 !== 0) {
+                        ctx.fillRect(wx, wy, 8, 10);
+                    }
+                    row++;
+                }
+                col++;
+            }
+            ctx.fillStyle = color;
+        }
+    }
 }
 
 // --- LEVEL GENERATION & RANDOMIZATION ---
+
 function populateLevelObjects() {
     treats = [];
     enemies = [];
@@ -973,6 +911,7 @@ function populateLevelObjects() {
         if (plat.y === 380 && plat.x > 400 && plat.x < levelWidth - 400) {
             validEnemyPlatforms.push(plat);
         }
+
         if (plat.h === 70) {
             for (let t = plat.x + 60; t < plat.x + plat.w - 30; t += 90) {
                 if (Math.random() > 0.4) {
@@ -981,6 +920,7 @@ function populateLevelObjects() {
             }
         } else {
             validHeartPlatforms.push(plat);
+
             if (plat.y === 280) {
                 treats.push({ x: plat.x + plat.w / 2, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
             } else if (plat.y === 180) {
@@ -1013,8 +953,6 @@ function populateLevelObjects() {
 function generateLevel() {
     platforms = [];
     currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
-    generateLayers();
-    initAtmosphere();
 
     let x = 0;
     while (x < levelWidth) {
@@ -1062,20 +1000,38 @@ function loseLife() {
 }
 
 function updateHUD() {
-    document.getElementById('treat-count').innerText = `🦴 Treats: ${totalTreats}`;
-    document.getElementById('lives-display').innerText = `❤️ Lives: ${playerLives}`;
-    document.getElementById('level-display').innerText = `Level ${currentLevel}`;
+    document.getElementById('treat-count').innerHTML = `🦴 <span>${totalTreats}</span>`;
+    document.getElementById('lives-display').innerHTML = `❤️ <span>${playerLives}</span>`;
+    document.getElementById('level-display').innerText = `LVL ${currentLevel}`;
 }
 
 // --- RENDERING & COLLISIONS ---
 function drawPlatforms() {
     platforms.forEach(p => {
         let rx = p.x - cameraX;
+        
+        // Base Body
         switch (currentTheme) {
-            case 'SUNNY': ctx.fillStyle = '#5cd38c'; ctx.fillRect(rx, p.y, p.w, 12); ctx.fillStyle = '#8d5524'; ctx.fillRect(rx, p.y + 12, p.w, p.h - 12); break;
-            case 'JUNGLE': ctx.fillStyle = '#27ae60'; ctx.fillRect(rx, p.y, p.w, 15); ctx.fillStyle = '#2c3e50'; ctx.fillRect(rx, p.y + 15, p.w, p.h - 15); break;
-            case 'WINTER': ctx.fillStyle = '#ecf0f1'; ctx.fillRect(rx, p.y, p.w, 14); ctx.fillStyle = '#34495e'; ctx.fillRect(rx, p.y + 14, p.w, p.h - 14); break;
-            case 'CITY_NIGHT': case 'CITY_DAY': ctx.fillStyle = '#7f8c8d'; ctx.fillRect(rx, p.y, p.w, p.h); ctx.fillStyle = '#95a5a6'; ctx.fillRect(rx, p.y, p.w, 6); break;
+            case 'SUNNY': 
+                ctx.fillStyle = '#5cd38c'; ctx.fillRect(rx, p.y, p.w, 12); ctx.fillStyle = '#8d5524'; ctx.fillRect(rx, p.y + 12, p.w, p.h - 12); break;
+            case 'JUNGLE': 
+                ctx.fillStyle = '#27ae60'; ctx.fillRect(rx, p.y, p.w, 15); ctx.fillStyle = '#2c3e50'; ctx.fillRect(rx, p.y + 15, p.w, p.h - 15); break;
+            case 'WINTER': 
+                ctx.fillStyle = '#ecf0f1'; ctx.fillRect(rx, p.y, p.w, 14); ctx.fillStyle = '#34495e'; ctx.fillRect(rx, p.y + 14, p.w, p.h - 14); break;
+            case 'CITY_NIGHT': case 'CITY_DAY': 
+                ctx.fillStyle = '#7f8c8d'; ctx.fillRect(rx, p.y, p.w, p.h); ctx.fillStyle = '#95a5a6'; ctx.fillRect(rx, p.y, p.w, 6); break;
+        }
+
+        // Thematic Texture/Highlight
+        if (currentTheme === 'SUNNY') {
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect(rx, p.y, p.w, 4);
+        } else if (currentTheme === 'WINTER') {
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.fillRect(rx, p.y, p.w, 4);
+        } else if (currentTheme === 'CITY_NIGHT') {
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(rx, p.y, p.w, 2);
         }
     });
 }
@@ -1086,11 +1042,17 @@ function drawTreats() {
         if (t.collected) return;
         let rx = t.x - cameraX;
         let ry = t.y + Math.sin(time + t.floatOffset) * 4;
+        
         ctx.fillStyle = '#f39c12';
         ctx.beginPath(); ctx.roundRect(rx - 10, ry - 4, 20, 8, 3); ctx.fill();
         ctx.beginPath(); ctx.arc(rx - 10, ry - 4, 5, 0, Math.PI * 2); ctx.arc(rx - 10, ry + 4, 5, 0, Math.PI * 2); ctx.arc(rx + 10, ry - 4, 5, 0, Math.PI * 2); ctx.arc(rx + 10, ry + 4, 5, 0, Math.PI * 2); ctx.fill();
+        
         if (player.x < t.x + 15 && player.x + player.w > t.x - 15 && player.y < ry + 15 && player.y + player.h > ry - 15) {
             t.collected = true; totalTreats++; updateHUD();
+            // Sparkle effect
+            for(let i=0; i<8; i++) {
+                particles.push(new Particle(t.x, t.y, 'sparkle'));
+            }
         }
     });
 }
@@ -1129,6 +1091,9 @@ function drawHeartPickup() {
         }
         totalTreats += 10; 
         updateHUD();
+        for(let i=0; i<10; i++) {
+            particles.push(new Particle(heartPickup.x, heartPickup.y, 'sparkle'));
+        }
     }
 }
 
@@ -1172,9 +1137,18 @@ function updateGameLogic() {
     if (gameState === 'PLAYING') {
         player.update();
         
+        // Camera Tracking
         cameraX = player.x - 200;
         if (cameraX < 0) cameraX = 0;
         if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
+        
+        // Update Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) {
+                particles.splice(i, 1);
+            }
+        }
     }
 }
 
@@ -1187,6 +1161,10 @@ function renderGame() {
     drawHeartPickup();
     handleEnemies();
     drawFinishLine();
+    
+    // Draw Particles
+    particles.forEach(p => p.draw());
+    
     player.draw();
 }
 
