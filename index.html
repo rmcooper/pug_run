@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.17 -->
+    <!-- Version 1.0.18 -->
     <style>
         * {
             box-sizing: border-box;
@@ -729,7 +729,7 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#2e7d32');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            drawTallJungleMountains(0.08, '#14382c'); // Added towering background mountains
+            drawTallJungleMountains(0.08, '#3e352f'); // Updated: Rocky beige/brown color & elevated
             drawDistantMountains(0.15, '#195b4e', 240, 350);
             drawJungleCanopy(0.3, '#0b382d');
             drawSecondaryGround(0.5, '#1e4d3a'); // Secondary lower ground layer
@@ -745,6 +745,7 @@ function drawParallaxBackground() {
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
+            drawWinterMountains(0.10, '#17202a'); // Added ominous, high, hazy mountain range
             drawParallaxTrees(0.22, '#2c3e50', true); 
             drawSnowDrifts(0.35, 'rgba(236, 240, 241, 0.25)'); // Low rolling faded snow drifts
             drawSecondaryGround(0.5, '#2c3e50'); // Secondary lower ground layer
@@ -847,6 +848,30 @@ function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
     ctx.fill();
 }
 
+// Ominous, tall, hazy mountains for Winter background
+function drawWinterMountains(factor, color) {
+    ctx.fillStyle = color;
+    let spacing = 450;
+    let offset = (cameraX * factor) % spacing;
+
+    ctx.beginPath();
+    ctx.moveTo(-spacing, canvas.height);
+    for (let x = -spacing; x < canvas.width + spacing * 2; x += spacing) {
+        let rx = x - offset;
+        ctx.lineTo(rx + spacing * 0.25, 90);
+        ctx.lineTo(rx + spacing * 0.45, 150);
+        ctx.lineTo(rx + spacing * 0.65, 70);
+        ctx.lineTo(rx + spacing * 0.85, 130);
+        ctx.lineTo(rx + spacing, canvas.height);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Snow atmospheric haze over distant mountains
+    ctx.fillStyle = 'rgba(236, 240, 241, 0.15)';
+    ctx.fillRect(0, 50, canvas.width, canvas.height - 50);
+}
+
 // Low rolling, highly faded snow drifts for Winter
 function drawSnowDrifts(factor, color) {
     ctx.fillStyle = color;
@@ -870,26 +895,31 @@ function drawSnowDrifts(factor, color) {
 // Tall mountain range in background of Jungle map
 function drawTallJungleMountains(factor, color) {
     ctx.fillStyle = color;
-    let spacing = 500;
+    let spacing = 520;
     let offset = (cameraX * factor) % spacing;
 
     ctx.beginPath();
     ctx.moveTo(-spacing, canvas.height);
     for (let x = -spacing; x < canvas.width + spacing * 2; x += spacing) {
         let rx = x - offset;
-        ctx.lineTo(rx + spacing * 0.4, 110);
-        ctx.lineTo(rx + spacing * 0.6, 140);
-        ctx.lineTo(rx + spacing * 0.8, 100);
+        ctx.lineTo(rx + spacing * 0.35, 75);
+        ctx.lineTo(rx + spacing * 0.55, 120);
+        ctx.lineTo(rx + spacing * 0.75, 60);
         ctx.lineTo(rx + spacing, canvas.height);
     }
     ctx.closePath();
     ctx.fill();
+
+    // Soft jungle mist/haze over far background mountains
+    ctx.fillStyle = 'rgba(168, 224, 99, 0.12)';
+    ctx.fillRect(0, 40, canvas.width, canvas.height - 40);
 }
 
 function drawParallaxTrees(factor, foliageColor, hasSnow) {
     let loopWidth = 900;
     let offset = (cameraX * factor) % loopWidth;
-    let baseY = 380;
+    let groundY = 380;
+    let bottomY = canvas.height + 50; // Extend trunks down past canvas bottom so they don't get cut off
 
     for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += 75) {
         let rx = x - offset;
@@ -897,15 +927,16 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
         
         let treeHeight = 120 + (Math.abs(Math.sin(treeIdx * 11.3)) * 100); 
         let treeWidth = 30 + (Math.abs(Math.cos(treeIdx * 4.7)) * 20);
+        let topY = groundY - treeHeight;
 
-        // Trunk
+        // Trunk extends deep below ground level
         ctx.fillStyle = '#4a2e1b';
-        ctx.fillRect(rx + (treeWidth / 2) - 4, baseY - treeHeight, 8, treeHeight);
+        ctx.fillRect(rx + (treeWidth / 2) - 4, topY, 8, bottomY - topY);
 
         // Tiered Foliage
         ctx.fillStyle = foliageColor;
         for (let tier = 0; tier < 3; tier++) {
-            let tierY = baseY - treeHeight + (tier * 35);
+            let tierY = topY + (tier * 35);
             let tierWidth = treeWidth * (1 + tier * 0.35);
 
             ctx.beginPath();
