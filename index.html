@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pug Run: Endless Treat Collector</title>
-    <!-- Version 1.0.7 -->
+    <title>Pug Run: Enhanced Edition</title>
     <style>
         * {
             box-sizing: border-box;
@@ -13,7 +12,7 @@
         }
 
         body {
-            background-color: #1a1a1a;
+            background-color: #121212;
             color: #fff;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
@@ -24,19 +23,19 @@
             overflow: hidden;
         }
 
-        #game-container {
+        #game-wrapper {
             position: relative;
             width: 800px;
             height: 450px;
-            border: 4px solid #fff;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border-radius: 12px;
             overflow: hidden;
-            background: #000;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6), 0 0 10px rgba(255, 255, 255, 0.1);
+            border: 2px solid #333;
         }
 
         canvas {
             display: block;
+            background: #000;
         }
 
         #ui-layer {
@@ -49,15 +48,26 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 15px;
+            padding: 20px;
         }
 
         .hud {
             display: flex;
             justify-content: space-between;
-            font-size: 20px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            font-size: 22px;
+            font-weight: 800;
+            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,0.5);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .hud > div {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .overlay {
@@ -66,47 +76,63 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.75);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             pointer-events: auto;
             text-align: center;
-            padding: 20px;
+            padding: 30px;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
         }
 
         .overlay h1 {
-            font-size: 42px;
+            font-size: 48px;
             color: #f1c40f;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 15px;
+            text-shadow: 3px 3px 0 #000;
+            letter-spacing: -1px;
         }
 
         .overlay p {
             font-size: 18px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             max-width: 500px;
-            line-height: 1.4;
+            line-height: 1.6;
+            color: #e0e0e0;
         }
 
         .btn {
-            background: #2ecc71;
+            background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%);
             color: #fff;
             border: none;
-            padding: 12px 30px;
+            padding: 14px 35px;
             font-size: 20px;
             font-weight: bold;
-            border-radius: 25px;
+            border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 4px 0 #27ae60;
+            box-shadow: 0 6px 0 #1e8449, 0 10px 10px rgba(0,0,0,0.3);
             transition: all 0.1s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .btn:hover {
-            background: #27ae60;
             transform: translateY(2px);
-            box-shadow: 0 2px 0 #1e8449;
+            box-shadow: 0 4px 0 #1e8449, 0 6px 6px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, #3ae77f 0%, #2ecc71 100%);
+        }
+
+        .btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #1e8449, 0 0 0 rgba(0,0,0,0.3);
         }
 
         .hidden {
@@ -114,37 +140,40 @@
         }
 
         .controls-hint {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #ccc;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #888;
+            background: rgba(255,255,255,0.05);
+            padding: 5px 15px;
+            border-radius: 15px;
         }
     </style>
 </head>
 <body>
 
-<div id="game-container">
+<div id="game-wrapper">
     <canvas id="gameCanvas" width="800" height="450"></canvas>
     
     <div id="ui-layer">
         <div class="hud">
-            <div id="treat-count">🦴 Treats: 0</div>
-            <div id="lives-display">❤️ Lives: 5</div>
-            <div id="level-display">Level 1</div>
+            <div id="treat-count">🦴 <span>0</span></div>
+            <div id="level-display">LVL 1</div>
+            <div id="lives-display">❤️ <span>5</span></div>
         </div>
     </div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
         <h1>Pug Run!</h1>
-        <p>Help the little pug collect treats and scare away feisty Chihuahuas across infinite randomized levels!</p>
-        <button class="btn" onclick="startGame()">Start Game</button>
+        <p>Explore beautiful worlds, collect treats, and bounce on Chihuahuas in this endless adventure.</p>
+        <button class="btn" onclick="startGame()">Start Adventure</button>
         <div class="controls-hint">Controls: Arrow Keys / WASD to move & jump</div>
     </div>
 
     <!-- Level Complete Screen -->
     <div id="level-screen" class="overlay hidden">
         <h1 id="level-title">Level Cleared!</h1>
-        <p id="level-desc">Great job! Get ready for the next area.</p>
+        <p id="level-desc">Beautiful scenery! Get ready for the next area.</p>
         <button class="btn" onclick="nextLevel()">Next Level</button>
     </div>
 
@@ -200,6 +229,62 @@ let heartPickup = null;
 let enemies = [];
 let finishLine = { x: 0, y: 0, w: 40, h: 80 };
 
+// --- PARTICLE SYSTEM ---
+let particles = [];
+
+class Particle {
+    constructor(x, y, type) {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.life = 1.0;
+        
+        if (type === 'dust') {
+            this.vx = (Math.random() - 0.5) * 2;
+            this.vy = (Math.random() - 0.5) * 2 - 1;
+            this.size = Math.random() * 3 + 1;
+            this.color = `rgba(255, 255, 255,`;
+        } else if (type === 'snow') {
+            this.vx = (Math.random() - 0.5) * 1;
+            this.vy = Math.random() * 2 + 1;
+            this.size = Math.random() * 4 + 2;
+            this.color = `rgba(255, 255, 255,`;
+        } else if (type === 'sparkle') {
+            this.vx = (Math.random() - 0.5) * 4;
+            this.vy = (Math.random() - 0.5) * 4;
+            this.size = Math.random() * 4 + 2;
+            this.color = '#f1c40f';
+            this.life = 0.6;
+        }
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= 0.02;
+        
+        if (this.type === 'snow') {
+            this.vx += Math.sin(Date.now() * 0.001 + this.x) * 0.01;
+        }
+    }
+
+    draw() {
+        if (this.type === 'sparkle') {
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = this.life;
+            ctx.beginPath();
+            ctx.arc(this.x - cameraX, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0;
+        } else {
+            ctx.fillStyle = this.color + this.life + ')';
+            ctx.beginPath();
+            ctx.arc(this.x - cameraX, this.y, this.size, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
 // --- PLAYER (PUG) ---
 const player = {
     x: 100,
@@ -208,14 +293,15 @@ const player = {
     h: 30,
     vx: 0,
     vy: 0,
-    speed: 8.5,        // Increased from 5.5 → 8.5 (≈55% faster ground movement)
-    jumpPower: -11.5,   // Increased from -9.5 → -11.5 (higher, more powerful jump)
-    gravity: 0.55,      // Increased from 0.45 → 0.55 (snappier arc, faster descent)
+    speed: 8.5,
+    jumpPower: -13.5,
+    gravity: 0.55,
     grounded: false,
     facing: 'right',
     animFrame: 0,
     animTimer: 0,
     invincibleTimer: 0,
+    dustTimer: 0,
 
     reset(x, y) {
         this.x = x;
@@ -224,6 +310,7 @@ const player = {
         this.vy = 0;
         this.grounded = false;
         this.invincibleTimer = 60; 
+        particles = [];
     },
 
     update() {
@@ -243,6 +330,10 @@ const player = {
         if (keys.up && this.grounded) {
             this.vy = this.jumpPower;
             this.grounded = false;
+            // Add dust on jump
+            for(let i=0; i<5; i++) {
+                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust'));
+            }
         }
 
         // Apply Gravity
@@ -280,8 +371,14 @@ const player = {
             if (this.animTimer % 12 === 0) {
                 this.animFrame = (this.animFrame + 1) % 2;
             }
+            // Run dust
+            this.dustTimer++;
+            if (this.dustTimer % 5 === 0) {
+                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust'));
+            }
         } else {
             this.animFrame = 0;
+            this.dustTimer = 0;
         }
     },
 
@@ -538,24 +635,35 @@ function drawParallaxBackground() {
     
     switch (currentTheme) {
         case 'SUNNY':
-            bgGradient.addColorStop(0, '#70c5ce');
-            bgGradient.addColorStop(1, '#cce8e4');
+            bgGradient.addColorStop(0, '#4facfe');
+            bgGradient.addColorStop(1, '#00f2fe');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            ctx.fillStyle = '#fff7b1'; ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
+            // Sun
+            ctx.fillStyle = '#fff7b1'; 
+            ctx.shadowBlur = 50; ctx.shadowColor = '#f1c40f';
+            ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+            
             drawClouds(0.1, '#ffffff');
             drawDistantHills(0.18, '#81c784', 220, 45, 600);
             drawDistantHills(0.35, '#4caf50', 280, 35, 400);
             break;
 
         case 'JUNGLE':
-            bgGradient.addColorStop(0, '#134e5e');
-            bgGradient.addColorStop(1, '#71b280');
+            bgGradient.addColorStop(0, '#0f2027');
+            bgGradient.addColorStop(0.5, '#203a43');
+            bgGradient.addColorStop(1, '#2c5364');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawDistantMountains(0.1, '#114136', 200, 400);
             drawDistantMountains(0.2, '#195b4e', 260, 300);
             drawJungleCanopy(0.3, '#0b382d');
+            
+            // Fireflies
+            if (Math.random() > 0.95) {
+                particles.push(new Particle(Math.random() * canvas.width + cameraX, Math.random() * canvas.height * 0.8, 'sparkle'));
+            }
             break;
 
         case 'WINTER':
@@ -564,15 +672,30 @@ function drawParallaxBackground() {
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawDistantMountains(0.1, '#7f8c8d', 180, 400);
-            drawClouds(0.15, 'rgba(255, 255, 255, 0.4)');
+            drawClouds(0.15, 'rgba(255, 255, 255, 0.2)');
             drawDistantMountains(0.2, '#bdc3c7', 250, 300);
             drawPineTrees(0.3, '#2c3e50');
+            
+            // Snow Particles
+            if (Math.random() > 0.8) {
+                particles.push(new Particle(cameraX + Math.random() * canvas.width, -10, 'snow'));
+            }
             break;
 
         case 'CITY_NIGHT':
             bgGradient.addColorStop(0, '#0f2027');
             bgGradient.addColorStop(1, '#203a43');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Stars
+            ctx.fillStyle = '#fff';
+            for(let i=0; i<50; i++) {
+                let sx = (Math.sin(i * 132) * 10000) % canvas.width;
+                let sy = (Math.cos(i * 456) * 10000) % (canvas.height * 0.6);
+                if (sx < 0) sx += canvas.width;
+                if (sy < 0) sy += canvas.height * 0.6;
+                ctx.fillRect(sx, sy, 1.5, 1.5);
+            }
 
             ctx.fillStyle = '#f5f6fa'; ctx.beginPath(); ctx.arc(150, 70, 30, 0, Math.PI * 2); ctx.fill();
             drawSkyline(0.15, '#111923', false, 120);
@@ -586,6 +709,7 @@ function drawParallaxBackground() {
 
             drawSkyline(0.15, '#e67e22', false, 100);
             drawSkyline(0.3, '#d35400', false, 180);
+            drawClouds(0.2, 'rgba(255,255,255,0.3)');
             break;
     }
 }
@@ -807,20 +931,38 @@ function loseLife() {
 }
 
 function updateHUD() {
-    document.getElementById('treat-count').innerText = `🦴 Treats: ${totalTreats}`;
-    document.getElementById('lives-display').innerText = `❤️ Lives: ${playerLives}`;
-    document.getElementById('level-display').innerText = `Level ${currentLevel}`;
+    document.getElementById('treat-count').innerHTML = `🦴 <span>${totalTreats}</span>`;
+    document.getElementById('lives-display').innerHTML = `❤️ <span>${playerLives}</span>`;
+    document.getElementById('level-display').innerText = `LVL ${currentLevel}`;
 }
 
 // --- RENDERING & COLLISIONS ---
 function drawPlatforms() {
     platforms.forEach(p => {
         let rx = p.x - cameraX;
+        
+        // Base Body
         switch (currentTheme) {
-            case 'SUNNY': ctx.fillStyle = '#5cd38c'; ctx.fillRect(rx, p.y, p.w, 12); ctx.fillStyle = '#8d5524'; ctx.fillRect(rx, p.y + 12, p.w, p.h - 12); break;
-            case 'JUNGLE': ctx.fillStyle = '#27ae60'; ctx.fillRect(rx, p.y, p.w, 15); ctx.fillStyle = '#2c3e50'; ctx.fillRect(rx, p.y + 15, p.w, p.h - 15); break;
-            case 'WINTER': ctx.fillStyle = '#ecf0f1'; ctx.fillRect(rx, p.y, p.w, 14); ctx.fillStyle = '#34495e'; ctx.fillRect(rx, p.y + 14, p.w, p.h - 14); break;
-            case 'CITY_NIGHT': case 'CITY_DAY': ctx.fillStyle = '#7f8c8d'; ctx.fillRect(rx, p.y, p.w, p.h); ctx.fillStyle = '#95a5a6'; ctx.fillRect(rx, p.y, p.w, 6); break;
+            case 'SUNNY': 
+                ctx.fillStyle = '#5cd38c'; ctx.fillRect(rx, p.y, p.w, 12); ctx.fillStyle = '#8d5524'; ctx.fillRect(rx, p.y + 12, p.w, p.h - 12); break;
+            case 'JUNGLE': 
+                ctx.fillStyle = '#27ae60'; ctx.fillRect(rx, p.y, p.w, 15); ctx.fillStyle = '#2c3e50'; ctx.fillRect(rx, p.y + 15, p.w, p.h - 15); break;
+            case 'WINTER': 
+                ctx.fillStyle = '#ecf0f1'; ctx.fillRect(rx, p.y, p.w, 14); ctx.fillStyle = '#34495e'; ctx.fillRect(rx, p.y + 14, p.w, p.h - 14); break;
+            case 'CITY_NIGHT': case 'CITY_DAY': 
+                ctx.fillStyle = '#7f8c8d'; ctx.fillRect(rx, p.y, p.w, p.h); ctx.fillStyle = '#95a5a6'; ctx.fillRect(rx, p.y, p.w, 6); break;
+        }
+
+        // Thematic Texture/Highlight
+        if (currentTheme === 'SUNNY') {
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            ctx.fillRect(rx, p.y, p.w, 4);
+        } else if (currentTheme === 'WINTER') {
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.fillRect(rx, p.y, p.w, 4);
+        } else if (currentTheme === 'CITY_NIGHT') {
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(rx, p.y, p.w, 2);
         }
     });
 }
@@ -831,11 +973,17 @@ function drawTreats() {
         if (t.collected) return;
         let rx = t.x - cameraX;
         let ry = t.y + Math.sin(time + t.floatOffset) * 4;
+        
         ctx.fillStyle = '#f39c12';
         ctx.beginPath(); ctx.roundRect(rx - 10, ry - 4, 20, 8, 3); ctx.fill();
         ctx.beginPath(); ctx.arc(rx - 10, ry - 4, 5, 0, Math.PI * 2); ctx.arc(rx - 10, ry + 4, 5, 0, Math.PI * 2); ctx.arc(rx + 10, ry - 4, 5, 0, Math.PI * 2); ctx.arc(rx + 10, ry + 4, 5, 0, Math.PI * 2); ctx.fill();
+        
         if (player.x < t.x + 15 && player.x + player.w > t.x - 15 && player.y < ry + 15 && player.y + player.h > ry - 15) {
             t.collected = true; totalTreats++; updateHUD();
+            // Sparkle effect
+            for(let i=0; i<8; i++) {
+                particles.push(new Particle(t.x, t.y, 'sparkle'));
+            }
         }
     });
 }
@@ -874,6 +1022,9 @@ function drawHeartPickup() {
         }
         totalTreats += 10; 
         updateHUD();
+        for(let i=0; i<10; i++) {
+            particles.push(new Particle(heartPickup.x, heartPickup.y, 'sparkle'));
+        }
     }
 }
 
@@ -909,10 +1060,9 @@ function drawFinishLine() {
 }
 
 // --- FIXED TIMESTEP GAME LOOP ---
-// Guarantees exact same game speed on 60Hz, 144Hz, 240Hz, or laggy displays!
 let lastTime = performance.now();
 let accumulator = 0;
-const physicsStep = 1000 / 60; // Locked to 60 logic ticks per second (~16.67ms)
+const physicsStep = 1000 / 60;
 
 function updateGameLogic() {
     if (gameState === 'PLAYING') {
@@ -922,6 +1072,14 @@ function updateGameLogic() {
         cameraX = player.x - 200;
         if (cameraX < 0) cameraX = 0;
         if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
+        
+        // Update Particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update();
+            if (particles[i].life <= 0) {
+                particles.splice(i, 1);
+            }
+        }
     }
 }
 
@@ -934,6 +1092,10 @@ function renderGame() {
     drawHeartPickup();
     handleEnemies();
     drawFinishLine();
+    
+    // Draw Particles
+    particles.forEach(p => p.draw());
+    
     player.draw();
 }
 
@@ -941,12 +1103,10 @@ function gameLoop(now) {
     let dt = now - lastTime;
     lastTime = now;
 
-    // Cap delta time to prevent spiral of death on tab unfocus or lag spikes
     if (dt > 250) dt = 250;
 
     accumulator += dt;
 
-    // Step physics forward in fixed increments regardless of display refresh rate
     while (accumulator >= physicsStep) {
         updateGameLogic();
         accumulator -= physicsStep;
