@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Treat Collector</title>
-    <!-- Version 1.0.1 -->
+    <!-- Version 1.0.2 -->
     <style>
         * {
             box-sizing: border-box;
@@ -197,7 +197,7 @@ const THEMES = ['SUNNY', 'JUNGLE', 'WINTER', 'CITY_NIGHT', 'CITY_DAY'];
 let currentTheme = 'SUNNY';
 let platforms = [];
 let treats = [];
-let heartPickup = null; // Single heart pickup per level
+let heartPickup = null;
 let enemies = [];
 let finishLine = { x: 0, y: 0, w: 40, h: 80 };
 
@@ -610,6 +610,8 @@ function drawForegroundJungle() {
     }
 }
 
+// --- PARALLAX HELPER FUNCTIONS ---
+
 function drawClouds(factor, color) {
     ctx.fillStyle = color;
     let loopWidth = 600;
@@ -685,6 +687,7 @@ function drawPineTrees(factor, color) {
     }
 }
 
+// FIXED: Deterministic window lighting prevents flickering/blanking on leftward scroll
 function drawSkyline(factor, color, showLights, heightScale) {
     ctx.fillStyle = color;
     let buildingWidth = 80;
@@ -693,21 +696,29 @@ function drawSkyline(factor, color, showLights, heightScale) {
 
     for (let x = -loopWidth; x < canvas.width + loopWidth; x += buildingWidth) {
         let rx = x - offset;
+        
+        // Compute fixed world building index
         let worldX = Math.floor((rx + cameraX * factor) / buildingWidth);
-        let h = heightScale + (Math.sin(worldX) * 60);
+        let h = heightScale + (Math.sin(worldX * 1.5) * 60);
 
         ctx.fillRect(rx, canvas.height - h, 65, h);
 
         if (showLights) {
             ctx.fillStyle = '#f1c40f';
-            for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
-                for (let wx = rx + 8; wx < rx + 50; wx += 15) {
-                    if ((wx + wy) % 3 !== 0) {
+            let col = 0;
+            for (let wx = rx + 8; wx < rx + 50; wx += 15) {
+                let row = 0;
+                for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
+                    // Use worldX, row, and col to lock window state permanently in place
+                    let windowId = Math.abs(worldX * 17 + col * 7 + row * 13);
+                    if (windowId % 3 !== 0) {
                         ctx.fillRect(wx, wy, 8, 10);
                     }
+                    row++;
                 }
+                col++;
             }
-            ctx.fillStyle = color;
+            ctx.fillStyle = color; // Reset fill
         }
     }
 }
@@ -733,7 +744,6 @@ function populateLevelObjects() {
                 }
             }
         } else {
-            // Floating Platforms suitable for Heart Pickups
             validHeartPlatforms.push(plat);
 
             if (plat.y === 280) {
@@ -745,7 +755,6 @@ function populateLevelObjects() {
         }
     });
 
-    // Spawn 1 Heart Icon per level on a random elevated platform
     if (validHeartPlatforms.length > 0) {
         let heartPlat = validHeartPlatforms[Math.floor(Math.random() * validHeartPlatforms.length)];
         heartPickup = {
@@ -849,7 +858,6 @@ function drawTreats() {
     });
 }
 
-// Render Red Heart Pickup
 function drawHeartPickup() {
     if (!heartPickup || heartPickup.collected) return;
 
@@ -857,7 +865,6 @@ function drawHeartPickup() {
     let rx = heartPickup.x - cameraX;
     let ry = heartPickup.y + Math.sin(time + heartPickup.floatOffset) * 5;
 
-    // Pulse / Glow Effect
     ctx.save();
     ctx.translate(rx, ry);
 
@@ -869,7 +876,6 @@ function drawHeartPickup() {
     ctx.closePath();
     ctx.fill();
 
-    // Shine Highlight
     ctx.fillStyle = '#fff';
     ctx.beginPath();
     ctx.arc(-4, -5, 1.8, 0, Math.PI * 2);
@@ -877,7 +883,6 @@ function drawHeartPickup() {
 
     ctx.restore();
 
-    // Heart Pickup Collision Logic
     if (player.x < heartPickup.x + 18 && player.x + player.w > heartPickup.x - 18 &&
         player.y < ry + 18 && player.y + player.h > ry - 18) {
         
@@ -885,7 +890,7 @@ function drawHeartPickup() {
         if (playerLives < maxLives) {
             playerLives++;
         }
-        totalTreats += 10; // Bonus treats for collecting extra life
+        totalTreats += 10; 
         updateHUD();
     }
 }
