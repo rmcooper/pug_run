@@ -373,7 +373,7 @@ class Chihuahua {
         this.h = 26;
         this.startX = x;
         this.patrolRange = patrolRange;
-        this.vx = 1.3; // Slightly faster patrol
+        this.vx = 1.3; 
         this.scared = false;
         this.vy = 0;
         this.barkTimer = Math.random() * 100;
@@ -428,7 +428,7 @@ class Chihuahua {
         ctx.roundRect(-12, -6, 22, 14, 4);
         ctx.fill();
 
-        // Black Saddle (Back)
+        // Black Saddle
         ctx.fillStyle = blackCoat;
         ctx.beginPath();
         ctx.roundRect(-12, -7, 18, 9, 3);
@@ -529,7 +529,169 @@ class Chihuahua {
     }
 }
 
-// --- MORE CHALLENGING LEVEL GENERATION ---
+// --- MULTI-LAYER PARALLAX BACKGROUND DRAWING ---
+function drawParallaxBackground() {
+    let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    
+    switch (currentTheme) {
+        case 'SUNNY':
+            bgGradient.addColorStop(0, '#70c5ce');
+            bgGradient.addColorStop(1, '#cce8e4');
+            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Layer 1: Sun & Clouds (Parallax 0.1)
+            ctx.fillStyle = '#fff7b1'; ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
+            drawClouds(0.1, '#ffffff');
+
+            // Layer 2: Distant Light Green Hills (Parallax 0.2)
+            drawDistantHills(0.2, '#81c784', 220, 100);
+
+            // Layer 3: Closer Rolling Hills (Parallax 0.3)
+            drawDistantHills(0.3, '#4caf50', 280, 60);
+            break;
+
+        case 'JUNGLE':
+            bgGradient.addColorStop(0, '#134e5e');
+            bgGradient.addColorStop(1, '#71b280');
+            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Layer 1: Sky & Far Canopy (Parallax 0.1)
+            drawDistantMountains(0.1, '#114136', 200);
+
+            // Layer 2: Mid Jungle Trees (Parallax 0.2)
+            drawDistantMountains(0.2, '#195b4e', 260);
+
+            // Layer 3: Close Dense Jungle Foilage (Parallax 0.3)
+            drawJungleCanopy(0.3, '#0b382d');
+            break;
+
+        case 'WINTER':
+            bgGradient.addColorStop(0, '#1c2833');
+            bgGradient.addColorStop(1, '#4a6572');
+            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Layer 1: Far Snowy Peaks (Parallax 0.1)
+            drawDistantMountains(0.1, '#7f8c8d', 180);
+            drawClouds(0.15, 'rgba(255, 255, 255, 0.4)');
+
+            // Layer 2: Mid Snowy Ridge (Parallax 0.2)
+            drawDistantMountains(0.2, '#bdc3c7', 250);
+
+            // Layer 3: Snowy Pine Trees (Parallax 0.3)
+            drawPineTrees(0.3, '#2c3e50');
+            break;
+
+        case 'CITY_NIGHT':
+            bgGradient.addColorStop(0, '#0f2027');
+            bgGradient.addColorStop(1, '#203a43');
+            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Layer 1: Moon (Parallax 0.05)
+            ctx.fillStyle = '#f5f6fa'; ctx.beginPath(); ctx.arc(150, 70, 30, 0, Math.PI * 2); ctx.fill();
+
+            // Layer 2: Far Silhouette Skyline (Parallax 0.15)
+            drawSkyline(0.15, '#111923', false, 120);
+
+            // Layer 3: Mid Lit Skyline (Parallax 0.3)
+            drawSkyline(0.3, '#1c2833', true, 200);
+            break;
+
+        case 'CITY_DAY':
+            bgGradient.addColorStop(0, '#f39c12');
+            bgGradient.addColorStop(1, '#f1c40f');
+            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Layer 1: Distant City Towers (Parallax 0.15)
+            drawSkyline(0.15, '#e67e22', false, 100);
+
+            // Layer 2: Mid City Buildings (Parallax 0.3)
+            drawSkyline(0.3, '#d35400', false, 180);
+            break;
+    }
+}
+
+// Parallax Helper Functions
+function drawClouds(factor, color) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 800;
+    for (let i = -100; i < canvas.width + 200; i += 300) {
+        let x = i - offset;
+        ctx.beginPath();
+        ctx.arc(x, 100, 25, 0, Math.PI * 2); ctx.arc(x + 25, 90, 35, 0, Math.PI * 2); ctx.arc(x + 55, 100, 25, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawDistantHills(factor, color, baseY, amplitude) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 600;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    for (let x = -100; x < canvas.width + 200; x += 50) {
+        let rx = x - offset;
+        let y = baseY + Math.sin((x + offset) * 0.01) * amplitude;
+        ctx.lineTo(rx, y);
+    }
+    ctx.lineTo(canvas.width + 200, canvas.height);
+    ctx.fill();
+}
+
+function drawDistantMountains(factor, color, peakY) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 400;
+    ctx.beginPath(); ctx.moveTo(0, canvas.height);
+    for (let x = -100; x < canvas.width + 200; x += 200) {
+        let rx = x - offset; ctx.lineTo(rx + 100, peakY); ctx.lineTo(rx + 200, canvas.height);
+    }
+    ctx.fill();
+}
+
+function drawJungleCanopy(factor, color) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 500;
+    for (let x = -100; x < canvas.width + 200; x += 150) {
+        let rx = x - offset;
+        ctx.beginPath();
+        ctx.arc(rx, 300, 70, 0, Math.PI * 2);
+        ctx.arc(rx + 60, 280, 90, 0, Math.PI * 2);
+        ctx.arc(rx + 120, 300, 70, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawPineTrees(factor, color) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 400;
+    for (let x = -100; x < canvas.width + 200; x += 90) {
+        let rx = x - offset;
+        ctx.beginPath();
+        ctx.moveTo(rx, canvas.height);
+        ctx.lineTo(rx + 25, 220);
+        ctx.lineTo(rx + 50, canvas.height);
+        ctx.fill();
+    }
+}
+
+function drawSkyline(factor, color, showLights, heightScale) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor) % 600;
+    for (let x = -100; x < canvas.width + 200; x += 80) {
+        let rx = x - offset;
+        let h = heightScale + (Math.sin(x * 0.05) * 60);
+        ctx.fillRect(rx, canvas.height - h, 65, h);
+        if (showLights) {
+            ctx.fillStyle = '#f1c40f';
+            for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
+                for (let wx = rx + 8; wx < rx + 50; wx += 15) {
+                    if (Math.random() > 0.3) ctx.fillRect(wx, wy, 8, 10);
+                }
+            }
+            ctx.fillStyle = color;
+        }
+    }
+}
+
+// --- LEVEL GENERATION ---
 function generateLevel() {
     platforms = [];
     treats = [];
@@ -537,11 +699,10 @@ function generateLevel() {
     currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
     let validEnemyPlatforms = [];
 
-    // Main level layout with shorter platforms & variable gaps
     let x = 0;
     while (x < levelWidth) {
-        let pWidth = 200 + Math.random() * 200; // Shorter ground platforms
-        if (x === 0) pWidth = 450; // Safe starting zone
+        let pWidth = 200 + Math.random() * 200; 
+        if (x === 0) pWidth = 450; 
         
         let plat = { x: x, y: 380, w: pWidth, h: 70 };
         platforms.push(plat);
@@ -557,32 +718,28 @@ function generateLevel() {
             }
         }
 
-        // MULTI-TIER PLATFORMS (Adds vertical depth and precision jumping)
+        // Multi-tier floating platforms
         if (x > 250 && x < levelWidth - 400) {
-            // Tier 1 Floating Platform (Mid Height)
             let midY = 280;
             let midW = 100 + Math.random() * 80;
             let midX = x + 30;
             platforms.push({ x: midX, y: midY, w: midW, h: 20 });
             treats.push({ x: midX + midW / 2, y: midY - 35, collected: false, floatOffset: Math.random() * 10 });
 
-            // Tier 2 Floating Platform (High Height - High Risk, High Reward!)
             if (Math.random() > 0.4) {
                 let highY = 180;
                 let highW = 90 + Math.random() * 60;
                 let highX = midX + 40;
                 platforms.push({ x: highX, y: highY, w: highW, h: 20 });
-                // Double treats on high platforms
                 treats.push({ x: highX + 20, y: highY - 35, collected: false, floatOffset: Math.random() * 10 });
                 treats.push({ x: highX + highW - 20, y: highY - 35, collected: false, floatOffset: Math.random() * 10 });
             }
         }
 
-        // More frequent, variable gaps (80px to 130px gap width)
         x += pWidth + (80 + Math.random() * 50); 
     }
 
-    // Spawn Enemies on platforms
+    // Spawn Enemies
     let numEnemies = Math.floor(Math.random() * 3) + 1; 
     for (let i = 0; i < numEnemies; i++) {
         if (validEnemyPlatforms.length > 0) {
@@ -613,87 +770,6 @@ function updateHUD() {
     document.getElementById('treat-count').innerText = `🦴 Treats: ${totalTreats}`;
     document.getElementById('lives-display').innerText = `❤️ Lives: ${playerLives}`;
     document.getElementById('level-display').innerText = `Level ${currentLevel}/${maxLevels}`;
-}
-
-// --- BACKGROUND DRAWING ---
-function drawParallaxBackground() {
-    let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    
-    switch (currentTheme) {
-        case 'SUNNY':
-            bgGradient.addColorStop(0, '#70c5ce');
-            bgGradient.addColorStop(1, '#cce8e4');
-            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#fff7b1'; ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
-            drawClouds(0.1, '#ffffff');
-            break;
-        case 'JUNGLE':
-            bgGradient.addColorStop(0, '#134e5e');
-            bgGradient.addColorStop(1, '#71b280');
-            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            drawDistantMountains(0.2, '#195b4e');
-            break;
-        case 'WINTER':
-            bgGradient.addColorStop(0, '#2c3e50');
-            bgGradient.addColorStop(1, '#000000');
-            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            drawDistantMountains(0.15, '#7f8c8d');
-            drawClouds(0.2, 'rgba(255, 255, 255, 0.6)');
-            break;
-        case 'CITY_NIGHT':
-            bgGradient.addColorStop(0, '#0f2027');
-            bgGradient.addColorStop(1, '#203a43');
-            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = '#f5f6fa'; ctx.beginPath(); ctx.arc(150, 70, 30, 0, Math.PI * 2); ctx.fill();
-            drawSkyline(0.2, '#111923', true);
-            break;
-        case 'CITY_DAY':
-            bgGradient.addColorStop(0, '#f39c12');
-            bgGradient.addColorStop(1, '#f1c40f');
-            ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
-            drawSkyline(0.2, '#d35400', false);
-            break;
-    }
-}
-
-function drawClouds(factor, color) {
-    ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 800;
-    for (let i = -100; i < canvas.width + 200; i += 300) {
-        let x = i - offset;
-        ctx.beginPath();
-        ctx.arc(x, 100, 25, 0, Math.PI * 2); ctx.arc(x + 25, 90, 35, 0, Math.PI * 2); ctx.arc(x + 55, 100, 25, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-function drawDistantMountains(factor, color) {
-    ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 400;
-    ctx.beginPath(); ctx.moveTo(0, canvas.height);
-    for (let x = -100; x < canvas.width + 200; x += 200) {
-        let rx = x - offset; ctx.lineTo(rx + 100, 180); ctx.lineTo(rx + 200, canvas.height);
-    }
-    ctx.fill();
-}
-
-function drawSkyline(factor, color, showLights) {
-    ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 600;
-    for (let x = -100; x < canvas.width + 200; x += 80) {
-        let rx = x - offset;
-        let h = 150 + (Math.sin(x) * 80);
-        ctx.fillRect(rx, canvas.height - h, 65, h);
-        if (showLights) {
-            ctx.fillStyle = '#f1c40f';
-            for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
-                for (let wx = rx + 8; wx < rx + 50; wx += 15) {
-                    if (Math.random() > 0.3) ctx.fillRect(wx, wy, 8, 10);
-                }
-            }
-            ctx.fillStyle = color;
-        }
-    }
 }
 
 // --- RENDERING & COLLISIONS ---
