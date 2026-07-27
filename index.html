@@ -561,7 +561,7 @@ function drawParallaxBackground() {
             // Layer 2: Mid Jungle Trees (Parallax 0.2)
             drawDistantMountains(0.2, '#195b4e', 260);
 
-            // Layer 3: Close Dense Jungle Foilage (Parallax 0.3)
+            // Layer 3: High Background Jungle Trees (Smooth, non-jittering)
             drawJungleCanopy(0.3, '#0b382d');
             break;
 
@@ -610,6 +610,27 @@ function drawParallaxBackground() {
     }
 }
 
+// Foreground Jungle Parallax (Draws in front of platforms at ground level)
+function drawForegroundJungle() {
+    if (currentTheme !== 'JUNGLE') return;
+
+    ctx.fillStyle = '#062019'; // Deep foreground foliage color
+    let factor = 1.2; // Faster scrolling than the camera to give dramatic depth
+    let loopWidth = 300;
+    let offset = (cameraX * factor) % loopWidth;
+
+    for (let x = -loopWidth; x < canvas.width + loopWidth; x += loopWidth) {
+        let rx = x - offset;
+        // Bush / Palm fronds along the bottom border (Y = 410 to 450, below platform ground at 380)
+        ctx.beginPath();
+        ctx.arc(rx + 20, 440, 45, 0, Math.PI * 2);
+        ctx.arc(rx + 80, 430, 55, 0, Math.PI * 2);
+        ctx.arc(rx + 160, 445, 40, 0, Math.PI * 2);
+        ctx.arc(rx + 230, 435, 50, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
 // Parallax Helper Functions
 function drawClouds(factor, color) {
     ctx.fillStyle = color;
@@ -648,13 +669,14 @@ function drawDistantMountains(factor, color, peakY) {
 
 function drawJungleCanopy(factor, color) {
     ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 500;
-    for (let x = -100; x < canvas.width + 200; x += 150) {
+    let loopWidth = 400;
+    let offset = (cameraX * factor) % loopWidth;
+    for (let x = -loopWidth; x < canvas.width + loopWidth; x += loopWidth) {
         let rx = x - offset;
         ctx.beginPath();
-        ctx.arc(rx, 300, 70, 0, Math.PI * 2);
-        ctx.arc(rx + 60, 280, 90, 0, Math.PI * 2);
-        ctx.arc(rx + 120, 300, 70, 0, Math.PI * 2);
+        ctx.arc(rx + 50, 280, 60, 0, Math.PI * 2);
+        ctx.arc(rx + 180, 260, 85, 0, Math.PI * 2);
+        ctx.arc(rx + 310, 285, 65, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -836,12 +858,21 @@ function gameLoop() {
         if (cameraX < 0) cameraX = 0;
         if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 1. Render Parallax Background Layers
         drawParallaxBackground();
+        
+        // 2. Render World Objects
         drawPlatforms();
         drawTreats();
         handleEnemies();
         drawFinishLine();
+        
+        // 3. Render Pug Player
         player.draw();
+
+        // 4. Render Foreground Jungle Layer (Stays at screen bottom)
+        drawForegroundJungle();
     }
     requestAnimationFrame(gameLoop);
 }
