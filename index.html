@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.18 -->
+    <!-- Version 1.0.19 -->
     <style>
         * {
             box-sizing: border-box;
@@ -720,7 +720,7 @@ function drawParallaxBackground() {
             drawDistantHills(0.18, '#81c784', 220, 45, 600);
             drawParallaxTrees(0.26, '#2e7d32', false);
             drawDistantHills(0.35, '#4caf50', 280, 35, 400);
-            drawSecondaryGround(0.5, '#388e3c'); // Secondary lower ground layer
+            drawSecondaryGround(0.5, '#388e3c'); 
             break;
 
         case 'JUNGLE':
@@ -729,10 +729,10 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#2e7d32');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            drawTallJungleMountains(0.08, '#3e352f'); // Updated: Rocky beige/brown color & elevated
+            drawTallJungleMountains(0.08, '#3e352f'); 
             drawDistantMountains(0.15, '#195b4e', 240, 350);
             drawJungleCanopy(0.3, '#0b382d');
-            drawSecondaryGround(0.5, '#1e4d3a'); // Secondary lower ground layer
+            drawSecondaryGround(0.5, '#1e4d3a'); 
             
             if (Math.random() > 0.98) {
                 particles.push(new Particle(Math.random() * canvas.width + cameraX, Math.random() * canvas.height * 0.8, 'firefly'));
@@ -745,10 +745,10 @@ function drawParallaxBackground() {
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
-            drawWinterMountains(0.10, '#17202a'); // Added ominous, high, hazy mountain range
-            drawParallaxTrees(0.22, '#2c3e50', true); 
-            drawSnowDrifts(0.35, 'rgba(236, 240, 241, 0.25)'); // Low rolling faded snow drifts
-            drawSecondaryGround(0.5, '#2c3e50'); // Secondary lower ground layer
+            drawWinterMountains(0.10, '#17202a'); 
+            drawParallaxTrees(0.22, '#2e7d32', true); // Matched color with Sunny day map + snow caps
+            drawSnowDrifts(0.35, '#e2e8f0'); // Rendered in front of trees as opaque snow drift
+            drawSecondaryGround(0.5, '#2c3e50'); 
             
             if (Math.random() > 0.7) {
                 particles.push(new Particle(cameraX + Math.random() * canvas.width, -10, 'snow'));
@@ -777,7 +777,7 @@ function drawParallaxBackground() {
             drawClouds(0.15, 'rgba(20, 30, 40, 0.6)');
             drawSkyline(0.15, '#111923', true, 260, true);  
             drawSkyline(0.3, '#1c2833', true, 200, false);
-            drawSecondaryGround(0.5, '#243342'); // Secondary lower ground layer
+            drawSecondaryGround(0.5, '#243342'); 
             break;
 
         case 'CITY_DAY':
@@ -789,7 +789,7 @@ function drawParallaxBackground() {
             drawClouds(0.2, 'rgba(255, 255, 255, 0.4)');
             drawSkyline(0.15, '#5d768d', false, 240, true);  
             drawSkyline(0.3, '#3f5166', false, 180, false);
-            drawSecondaryGround(0.5, '#52667a'); // Secondary lower ground layer
+            drawSecondaryGround(0.5, '#52667a'); 
             break;
     }
 }
@@ -810,11 +810,10 @@ function drawClouds(factor, color) {
     }
 }
 
-// Parallax layer running behind main platforms to ground the level depth
 function drawSecondaryGround(factor, color) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor);
-    let baseY = 405; // Slightly lower than primary platform ground level (380)
+    let baseY = 405; 
 
     ctx.beginPath();
     ctx.moveTo(-50, canvas.height);
@@ -848,7 +847,6 @@ function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
     ctx.fill();
 }
 
-// Ominous, tall, hazy mountains for Winter background
 function drawWinterMountains(factor, color) {
     ctx.fillStyle = color;
     let spacing = 450;
@@ -867,23 +865,22 @@ function drawWinterMountains(factor, color) {
     ctx.closePath();
     ctx.fill();
 
-    // Snow atmospheric haze over distant mountains
     ctx.fillStyle = 'rgba(236, 240, 241, 0.15)';
     ctx.fillRect(0, 50, canvas.width, canvas.height - 50);
 }
 
-// Low rolling, highly faded snow drifts for Winter
+// Opaque snow drifts rendered in front of trees
 function drawSnowDrifts(factor, color) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor);
-    let baseY = 330;
+    let baseY = 350;
 
     ctx.beginPath();
     ctx.moveTo(-50, canvas.height);
 
     for (let x = -50; x <= canvas.width + 50; x += 15) {
         let worldX = x + offset;
-        let y = baseY + Math.sin(worldX / 250 * Math.PI * 2) * 18 + Math.cos(worldX / 110 * Math.PI) * 10;
+        let y = baseY + Math.sin(worldX / 220 * Math.PI * 2) * 16 + Math.cos(worldX / 90 * Math.PI) * 8;
         ctx.lineTo(x, y);
     }
 
@@ -892,7 +889,6 @@ function drawSnowDrifts(factor, color) {
     ctx.fill();
 }
 
-// Tall mountain range in background of Jungle map
 function drawTallJungleMountains(factor, color) {
     ctx.fillStyle = color;
     let spacing = 520;
@@ -910,7 +906,6 @@ function drawTallJungleMountains(factor, color) {
     ctx.closePath();
     ctx.fill();
 
-    // Soft jungle mist/haze over far background mountains
     ctx.fillStyle = 'rgba(168, 224, 99, 0.12)';
     ctx.fillRect(0, 40, canvas.width, canvas.height - 40);
 }
@@ -919,7 +914,7 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
     let loopWidth = 900;
     let offset = (cameraX * factor) % loopWidth;
     let groundY = 380;
-    let bottomY = canvas.height + 50; // Extend trunks down past canvas bottom so they don't get cut off
+    let bottomY = canvas.height + 50; 
 
     for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += 75) {
         let rx = x - offset;
@@ -929,16 +924,17 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
         let treeWidth = 30 + (Math.abs(Math.cos(treeIdx * 4.7)) * 20);
         let topY = groundY - treeHeight;
 
-        // Trunk extends deep below ground level
+        // Trunk
         ctx.fillStyle = '#4a2e1b';
         ctx.fillRect(rx + (treeWidth / 2) - 4, topY, 8, bottomY - topY);
 
         // Tiered Foliage
-        ctx.fillStyle = foliageColor;
         for (let tier = 0; tier < 3; tier++) {
             let tierY = topY + (tier * 35);
             let tierWidth = treeWidth * (1 + tier * 0.35);
 
+            // Green Branch Tier
+            ctx.fillStyle = foliageColor;
             ctx.beginPath();
             ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2), tierY + 30);
             ctx.lineTo(rx + treeWidth / 2, tierY - 25);
@@ -946,15 +942,18 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
             ctx.closePath();
             ctx.fill();
 
+            // Precise White Snow Layer on top of branch parts
             if (hasSnow) {
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2.6), tierY + 12);
+                ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2.2), tierY + 18);
                 ctx.lineTo(rx + treeWidth / 2, tierY - 25);
-                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.6), tierY + 12);
+                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.2), tierY + 18);
+                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.8), tierY + 23);
+                ctx.lineTo(rx + treeWidth / 2, tierY - 12);
+                ctx.lineTo(rx + (treeWidth / 2) - (tierWidth / 2.8), tierY + 23);
                 ctx.closePath();
                 ctx.fill();
-                ctx.fillStyle = foliageColor;
             }
         }
     }
