@@ -746,7 +746,7 @@ function drawParallaxBackground() {
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
-            drawWinterMountains(0.10, '#10171e'); // High contrast dark mountains standing out through the haze
+            drawWinterMountains(0.10, '#10171e'); 
             drawParallaxTrees(0.22, '#2e7d32', true); 
             
             // Heavy Blizzard Snow Haze Layer over the tree line
@@ -950,16 +950,28 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
             ctx.closePath();
             ctx.fill();
 
-            // Thinner, lighter Snow Cap
+            // Pillowy Soft Snow Mounds on top of branch parts
             if (hasSnow) {
+                let midX = rx + treeWidth / 2;
+                let leftX = midX - (tierWidth / 2) - 2;
+                let rightX = midX + (tierWidth / 2) + 2;
+
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2.3), tierY + 8);
-                ctx.lineTo(rx + treeWidth / 2, tierY - 25);
-                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.3), tierY + 8);
-                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.8), tierY + 12);
-                ctx.lineTo(rx + treeWidth / 2, tierY - 18);
-                ctx.lineTo(rx + (treeWidth / 2) - (tierWidth / 2.8), tierY + 12);
+                // Start on far left branch tip
+                ctx.moveTo(leftX, tierY + 28);
+                // Soft pillowy bulge over left slope
+                ctx.quadraticCurveTo(midX - (tierWidth / 4), tierY - 18, midX, tierY - 28);
+                // Soft pillowy bulge over right slope
+                ctx.quadraticCurveTo(midX + (tierWidth / 4), tierY - 18, rightX, tierY + 28);
+                // Curved drape around right branch tip
+                ctx.quadraticCurveTo(rightX - 3, tierY + 33, rightX - 6, tierY + 28);
+                // Underside snow drape back to center
+                ctx.quadraticCurveTo(midX + (tierWidth / 4), tierY + 8, midX, tierY - 8);
+                // Underside snow drape back to left branch tip
+                ctx.quadraticCurveTo(midX - (tierWidth / 4), tierY + 8, leftX + 6, tierY + 28);
+                // Curved drape around left branch tip
+                ctx.quadraticCurveTo(leftX + 3, tierY + 33, leftX, tierY + 28);
                 ctx.closePath();
                 ctx.fill();
 
