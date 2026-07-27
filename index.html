@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pug Run: Treat Collector</title>
+    <title>Pug Run: Treat Collector </title>
+    <!-- Version 1.0 -->
     <style>
         * {
             box-sizing: border-box;
@@ -164,7 +165,7 @@ let gameState = 'START';
 let currentLevel = 1;
 const maxLevels = 10;
 let totalTreats = 0;
-let levelStartTreats = 0; // Tracks treats accumulated at the beginning of the current level/retry
+let levelStartTreats = 0; 
 let playerLives = 5;
 let cameraX = 0;
 const levelWidth = 3200;
@@ -530,7 +531,7 @@ class Chihuahua {
     }
 }
 
-// --- MULTI-LAYER PARALLAX BACKGROUND DRAWING ---
+// --- MULTI-LAYER PARALLAX BACKGROUND DRAWING (ROBUST GLITCH-FREE) ---
 function drawParallaxBackground() {
     let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     
@@ -540,10 +541,15 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#cce8e4');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
             
+            // Layer 1: Sun & Clouds (Parallax 0.1)
             ctx.fillStyle = '#fff7b1'; ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
             drawClouds(0.1, '#ffffff');
-            drawDistantHills(0.2, '#81c784', 220, 100);
-            drawDistantHills(0.3, '#4caf50', 280, 60);
+
+            // Layer 2: Far Rolling Green Hills (Parallax 0.18)
+            drawDistantHills(0.18, '#81c784', 220, 45, 600);
+
+            // Layer 3: Closer Rolling Hills (Parallax 0.35)
+            drawDistantHills(0.35, '#4caf50', 280, 35, 400);
             break;
 
         case 'JUNGLE':
@@ -551,8 +557,8 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#71b280');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            drawDistantMountains(0.1, '#114136', 200);
-            drawDistantMountains(0.2, '#195b4e', 260);
+            drawDistantMountains(0.1, '#114136', 200, 400);
+            drawDistantMountains(0.2, '#195b4e', 260, 300);
             drawJungleCanopy(0.3, '#0b382d');
             break;
 
@@ -561,9 +567,9 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#4a6572');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            drawDistantMountains(0.1, '#7f8c8d', 180);
+            drawDistantMountains(0.1, '#7f8c8d', 180, 400);
             drawClouds(0.15, 'rgba(255, 255, 255, 0.4)');
-            drawDistantMountains(0.2, '#bdc3c7', 250);
+            drawDistantMountains(0.2, '#bdc3c7', 250, 300);
             drawPineTrees(0.3, '#2c3e50');
             break;
 
@@ -596,7 +602,7 @@ function drawForegroundJungle() {
     let loopWidth = 300;
     let offset = (cameraX * factor) % loopWidth;
 
-    for (let x = -loopWidth; x < canvas.width + loopWidth; x += loopWidth) {
+    for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += loopWidth) {
         let rx = x - offset;
         ctx.beginPath();
         ctx.arc(rx + 20, 440, 45, 0, Math.PI * 2);
@@ -607,39 +613,53 @@ function drawForegroundJungle() {
     }
 }
 
-// Parallax Helpers
+// --- FIXED PARALLAX RENDERERS (PREVENTS POP-INS & GEOMETRY CLIPPING) ---
+
 function drawClouds(factor, color) {
     ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 800;
-    for (let i = -100; i < canvas.width + 200; i += 300) {
-        let x = i - offset;
+    let loopWidth = 600;
+    let offset = (cameraX * factor) % loopWidth;
+    for (let x = -loopWidth; x < canvas.width + loopWidth; x += 300) {
+        let rx = x - offset;
         ctx.beginPath();
-        ctx.arc(x, 100, 25, 0, Math.PI * 2); ctx.arc(x + 25, 90, 35, 0, Math.PI * 2); ctx.arc(x + 55, 100, 25, 0, Math.PI * 2);
+        ctx.arc(rx, 100, 25, 0, Math.PI * 2); 
+        ctx.arc(rx + 25, 90, 35, 0, Math.PI * 2); 
+        ctx.arc(rx + 55, 100, 25, 0, Math.PI * 2);
         ctx.fill();
     }
 }
 
-function drawDistantHills(factor, color, baseY, amplitude) {
+// Completely reworked to draw continuous sine hills without popping/clipping
+function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
     ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 600;
+    let offset = (cameraX * factor);
+    
     ctx.beginPath();
-    ctx.moveTo(0, canvas.height);
-    for (let x = -100; x < canvas.width + 200; x += 50) {
-        let rx = x - offset;
-        let y = baseY + Math.sin((x + offset) * 0.01) * amplitude;
-        ctx.lineTo(rx, y);
+    ctx.moveTo(-50, canvas.height);
+    
+    for (let x = -50; x <= canvas.width + 50; x += 10) {
+        let worldX = x + offset;
+        let y = baseY + Math.sin(worldX / wavelength * Math.PI * 2) * amplitude;
+        ctx.lineTo(x, y);
     }
-    ctx.lineTo(canvas.width + 200, canvas.height);
+    
+    ctx.lineTo(canvas.width + 50, canvas.height);
+    ctx.closePath();
     ctx.fill();
 }
 
-function drawDistantMountains(factor, color, peakY) {
+function drawDistantMountains(factor, color, peakY, spacing) {
     ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 400;
-    ctx.beginPath(); ctx.moveTo(0, canvas.height);
-    for (let x = -100; x < canvas.width + 200; x += 200) {
-        let rx = x - offset; ctx.lineTo(rx + 100, peakY); ctx.lineTo(rx + 200, canvas.height);
+    let offset = (cameraX * factor) % spacing;
+    
+    ctx.beginPath();
+    ctx.moveTo(-spacing, canvas.height);
+    for (let x = -spacing; x < canvas.width + spacing * 2; x += spacing) {
+        let rx = x - offset;
+        ctx.lineTo(rx + spacing / 2, peakY);
+        ctx.lineTo(rx + spacing, canvas.height);
     }
+    ctx.closePath();
     ctx.fill();
 }
 
@@ -647,7 +667,7 @@ function drawJungleCanopy(factor, color) {
     ctx.fillStyle = color;
     let loopWidth = 400;
     let offset = (cameraX * factor) % loopWidth;
-    for (let x = -loopWidth; x < canvas.width + loopWidth; x += loopWidth) {
+    for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += loopWidth) {
         let rx = x - offset;
         ctx.beginPath();
         ctx.arc(rx + 50, 280, 60, 0, Math.PI * 2);
@@ -659,8 +679,9 @@ function drawJungleCanopy(factor, color) {
 
 function drawPineTrees(factor, color) {
     ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 400;
-    for (let x = -100; x < canvas.width + 200; x += 90) {
+    let loopWidth = 360;
+    let offset = (cameraX * factor) % loopWidth;
+    for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += 90) {
         let rx = x - offset;
         ctx.beginPath();
         ctx.moveTo(rx, canvas.height);
@@ -672,16 +693,25 @@ function drawPineTrees(factor, color) {
 
 function drawSkyline(factor, color, showLights, heightScale) {
     ctx.fillStyle = color;
-    let offset = (cameraX * factor) % 600;
-    for (let x = -100; x < canvas.width + 200; x += 80) {
+    let buildingWidth = 80;
+    let loopWidth = buildingWidth * 8;
+    let offset = (cameraX * factor) % loopWidth;
+
+    for (let x = -loopWidth; x < canvas.width + loopWidth; x += buildingWidth) {
         let rx = x - offset;
-        let h = heightScale + (Math.sin(x * 0.05) * 60);
+        // Deterministic building height based on absolute X coordinate
+        let worldX = Math.floor((rx + cameraX * factor) / buildingWidth);
+        let h = heightScale + (Math.sin(worldX) * 60);
+
         ctx.fillRect(rx, canvas.height - h, 65, h);
+
         if (showLights) {
             ctx.fillStyle = '#f1c40f';
             for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
                 for (let wx = rx + 8; wx < rx + 50; wx += 15) {
-                    if (Math.random() > 0.3) ctx.fillRect(wx, wy, 8, 10);
+                    if ((wx + wy) % 3 !== 0) {
+                        ctx.fillRect(wx, wy, 8, 10);
+                    }
                 }
             }
             ctx.fillStyle = color;
@@ -691,28 +721,23 @@ function drawSkyline(factor, color, showLights, heightScale) {
 
 // --- LEVEL GENERATION & RANDOMIZATION ---
 
-// 1. Populates treats and enemies on existing platform geometry
 function populateLevelObjects() {
     treats = [];
     enemies = [];
     let validEnemyPlatforms = [];
 
     platforms.forEach(plat => {
-        // Find ground/floor platforms suitable for enemies
         if (plat.y === 380 && plat.x > 400 && plat.x < levelWidth - 400) {
             validEnemyPlatforms.push(plat);
         }
 
-        // Spawn treats on platforms
         if (plat.h === 70) {
-            // Main Floor Platform
             for (let t = plat.x + 60; t < plat.x + plat.w - 30; t += 90) {
                 if (Math.random() > 0.4) {
                     treats.push({ x: t, y: 340, collected: false, floatOffset: Math.random() * 10 });
                 }
             }
         } else {
-            // Floating Platforms
             if (plat.y === 280) {
                 treats.push({ x: plat.x + plat.w / 2, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
             } else if (plat.y === 180) {
@@ -722,7 +747,6 @@ function populateLevelObjects() {
         }
     });
 
-    // Spawn 1 to 3 Chihuahuas on random valid platforms
     let numEnemies = Math.floor(Math.random() * 3) + 1; 
     for (let i = 0; i < numEnemies; i++) {
         if (validEnemyPlatforms.length > 0) {
@@ -733,7 +757,6 @@ function populateLevelObjects() {
     }
 }
 
-// 2. Generates brand new platform geometry and theme (used on level load/next level)
 function generateLevel() {
     platforms = [];
     currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
@@ -746,7 +769,6 @@ function generateLevel() {
         let plat = { x: x, y: 380, w: pWidth, h: 70 };
         platforms.push(plat);
 
-        // Multi-tier floating platforms
         if (x > 250 && x < levelWidth - 400) {
             let midY = 280;
             let midW = 100 + Math.random() * 80;
@@ -764,27 +786,21 @@ function generateLevel() {
         x += pWidth + (80 + Math.random() * 50); 
     }
 
-    // Goal
     finishLine = { x: levelWidth - 200, y: 300, w: 60, h: 80 };
     platforms.push({ x: levelWidth - 300, y: 380, w: 300, h: 70 });
 
-    // Populate objects
     populateLevelObjects();
     player.reset(100, 200);
 }
 
-// 3. Triggered when losing a life: Keeps same platform map, resets treats to level start, randomizes items/enemies
 function loseLife() {
     playerLives--;
-    
-    // Reset treats to what was collected prior to starting this level
     totalTreats = levelStartTreats;
     updateHUD();
 
     if (playerLives <= 0) {
         showGameOver();
     } else {
-        // Re-randomize treats & enemies on the SAME platform layout
         populateLevelObjects();
         player.reset(100, 200);
     }
@@ -886,7 +902,7 @@ function startGame() {
 }
 
 function loadLevel(lvl) {
-    levelStartTreats = totalTreats; // Save checkpoint of treats for this level
+    levelStartTreats = totalTreats; 
     updateHUD();
     generateLevel();
 }
