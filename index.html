@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Endless Treat Collector</title>
-    <!-- Version 1.0.6 -->
+    <!-- Version 1.0.7 -->
     <style>
         * {
             box-sizing: border-box;
@@ -208,9 +208,9 @@ const player = {
     h: 30,
     vx: 0,
     vy: 0,
-    speed: 5.5,        // Increased horizontal speed (was 3.2)
-    jumpPower: -11.5,   // Faster, higher jump initial burst (was -9.2)
-    gravity: 0.45,      // Slightly higher gravity so the arc feels responsive (was 0.33)
+    speed: 8.5,        // Increased from 5.5 → 8.5 (≈55% faster ground movement)
+    jumpPower: -13.5,   // Increased from -11.5 → -13.5 (higher, more powerful jump)
+    gravity: 0.55,      // Increased from 0.45 → 0.55 (snappier arc, faster descent)
     grounded: false,
     facing: 'right',
     animFrame: 0,
@@ -900,7 +900,7 @@ function handleEnemies() {
 
 function drawFinishLine() {
     let rx = finishLine.x - cameraX;
-    ctx.fillStyle = '#e74c3c'; ctx.fillRect(rx, finishLine.y, finishLine.w, finishLine.h);
+    ctx.fillStyle = '#e74c2c'; ctx.fillRect(rx, finishLine.y, finishLine.w, finishLine.h);
     ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(rx - 10, finishLine.y); ctx.lineTo(rx + finishLine.w / 2, finishLine.y - 30); ctx.lineTo(rx + finishLine.w + 10, finishLine.y); ctx.fill();
     ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.arc(rx + finishLine.w / 2, finishLine.y + finishLine.h, 18, Math.PI, 0); ctx.fill();
     if (player.x + player.w > finishLine.x && player.x < finishLine.x + finishLine.w) {
