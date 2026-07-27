@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.14 -->
+    <!-- Version 1.0.15 -->
     <style>
         * {
             box-sizing: border-box;
@@ -745,17 +745,30 @@ function drawParallaxBackground() {
             drawDistantHills(0.18, '#81c784', 220, 45, 600);
             drawHillTrees(0.25, '#2e7d32'); // Added trees to hills
             drawDistantHills(0.35, '#4caf50', 280, 35, 400);
+            // NEW: Parallax trees between hills and ground with varying heights
+            drawSunnyParallaxTrees(0.45, '#228B22', '#32CD32');
             break;
 
         case 'JUNGLE':
-            bgGradient.addColorStop(0, '#0f2027');
-            bgGradient.addColorStop(0.5, '#203a43');
-            bgGradient.addColorStop(1, '#2c5364');
+            // DAYTIME SKY GRADIENT (changed from dark to daytime)
+            bgGradient.addColorStop(0, '#87CEEB');
+            bgGradient.addColorStop(0.4, '#B0E0E6');
+            bgGradient.addColorStop(0.7, '#E0F6FF');
+            bgGradient.addColorStop(1, '#F0FFF0');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            drawDistantMountains(0.1, '#114136', 200, 400);
-            drawDistantMountains(0.2, '#195b4e', 260, 300);
-            drawJungleCanopy(0.3, '#0b382d');
+            // Sun
+            ctx.fillStyle = '#FFF8DC'; 
+            ctx.shadowBlur = 40; ctx.shadowColor = '#FFD700';
+            ctx.beginPath(); ctx.arc(600, 60, 35, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Light clouds
+            drawClouds(0.12, 'rgba(255, 255, 255, 0.4)');
+            
+            drawDistantMountains(0.1, '#228B22', 180, 400);
+            drawDistantMountains(0.2, '#2E8B57', 240, 300);
+            drawJungleCanopy(0.3, '#228B22');
             
             // Fireflies
             if (Math.random() > 0.98) {
@@ -771,7 +784,8 @@ function drawParallaxBackground() {
             drawDistantMountains(0.1, '#7f8c8d', 180, 400);
             drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
             drawDistantMountains(0.2, '#bdc3c7', 250, 300);
-            drawPineTrees(0.3, '#2c3e50');
+            // REPLACED gray triangles with snow-covered trees
+            drawSnowPineTrees(0.3, '#2c3e50', '#ecf0f1');
             
             // Snow Particles
             if (Math.random() > 0.7) {
@@ -802,7 +816,9 @@ function drawParallaxBackground() {
             // Dark Clouds
             drawClouds(0.15, 'rgba(20, 30, 40, 0.6)');
             
-            drawSkyline(0.15, '#111923', false, 120);
+            // TALLER background buildings with haze
+            drawSkyline(0.12, '#111923', false, 160, true);
+            drawSkyline(0.18, '#1a252f', false, 130, true);
             drawSkyline(0.3, '#1c2833', true, 200);
             break;
 
@@ -813,13 +829,13 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#c4e0e5');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Stars REMOVED from daytime city as requested
-            
             // Semi-transparent Clouds
             drawClouds(0.2, 'rgba(255, 255, 255, 0.4)');
             
-            drawSkyline(0.15, '#5d768d', false, 100);
-            drawSkyline(0.3, '#3f5166', true, 180);
+            // TALLER background buildings with haze
+            drawSkyline(0.12, '#5d768d', false, 140, true);
+            drawSkyline(0.18, '#4a5f73', false, 110, true);
+            drawSkyline(0.3, '#3f5166', false, 180);
             break;
     }
 }
@@ -882,6 +898,36 @@ function drawHillTrees(factor, color) {
     }
 }
 
+// NEW: Parallax trees between hills and ground with varying heights
+function drawSunnyParallaxTrees(factor, trunkColor, leafColor) {
+    let loopWidth = 400;
+    let offset = (cameraX * factor) % loopWidth;
+    
+    for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += 80 + Math.random() * 40) {
+        let rx = x - offset;
+        
+        // Varying tree heights
+        let treeHeight = 60 + Math.sin(x * 0.1) * 30 + Math.cos(x * 0.05) * 20;
+        let baseY = canvas.height - 20;
+        
+        // Trunk
+        ctx.fillStyle = trunkColor;
+        ctx.fillRect(rx + 8, baseY - treeHeight, 6, treeHeight);
+        
+        // Foliage layers
+        ctx.fillStyle = leafColor;
+        for (let i = 0; i < 3; i++) {
+            let layerY = baseY - treeHeight + (i * 15);
+            let layerWidth = 30 - i * 5;
+            ctx.beginPath();
+            ctx.moveTo(rx + 11 - layerWidth/2, layerY + 10);
+            ctx.lineTo(rx + 11, layerY);
+            ctx.lineTo(rx + 11 + layerWidth/2, layerY + 10);
+            ctx.fill();
+        }
+    }
+}
+
 function drawDistantMountains(factor, color, peakY, spacing) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor) % spacing;
@@ -917,22 +963,46 @@ function drawJungleCanopy(factor, color) {
     }
 }
 
-function drawPineTrees(factor, color) {
-    ctx.fillStyle = color;
+// REPLACED: Snow-covered pine trees instead of gray triangles
+function drawSnowPineTrees(factor, trunkColor, snowColor) {
     let loopWidth = 360;
     let offset = (cameraX * factor) % loopWidth;
+    
     for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += 90) {
         let rx = x - offset;
-        ctx.beginPath();
-        ctx.moveTo(rx, canvas.height);
-        ctx.lineTo(rx + 25, 220);
-        ctx.lineTo(rx + 50, canvas.height);
-        ctx.fill();
+        
+        // Tree trunk
+        ctx.fillStyle = trunkColor;
+        ctx.fillRect(rx + 18, canvas.height - 80, 8, 80);
+        
+        // Snow-covered foliage layers
+        ctx.fillStyle = '#1a5276';
+        for (let i = 0; i < 4; i++) {
+            let layerY = canvas.height - 80 - (i * 20);
+            let layerWidth = 40 - i * 8;
+            
+            // Main tree layer
+            ctx.beginPath();
+            ctx.moveTo(rx + 22 - layerWidth/2, layerY + 15);
+            ctx.lineTo(rx + 22, layerY);
+            ctx.lineTo(rx + 22 + layerWidth/2, layerY + 15);
+            ctx.fill();
+            
+            // Snow cap
+            ctx.fillStyle = snowColor;
+            ctx.beginPath();
+            ctx.moveTo(rx + 22 - layerWidth/3, layerY + 8);
+            ctx.lineTo(rx + 22, layerY - 2);
+            ctx.lineTo(rx + 22 + layerWidth/3, layerY + 8);
+            ctx.fill();
+            
+            ctx.fillStyle = '#1a5276';
+        }
     }
 }
 
-function drawSkyline(factor, color, showLights, heightScale) {
-    ctx.fillStyle = color;
+// UPDATED: Taller background buildings with haze effect
+function drawSkyline(factor, color, showLights, heightScale, isHaze = false) {
     let buildingWidth = 80;
     let loopWidth = buildingWidth * 8;
     let offset = (cameraX * factor) % loopWidth;
@@ -943,6 +1013,7 @@ function drawSkyline(factor, color, showLights, heightScale) {
         let h = heightScale + (Math.sin(worldX * 1.5) * 60);
 
         // Building Body
+        ctx.fillStyle = color;
         ctx.fillRect(rx, canvas.height - h, 65, h);
         
         // Building Highlight (Day) or Shadow (Night)
@@ -958,21 +1029,44 @@ function drawSkyline(factor, color, showLights, heightScale) {
 
         // Windows
         if (showLights) {
-            ctx.fillStyle = '#f1c40f';
-            let col = 0;
-            for (let wx = rx + 8; wx < rx + 50; wx += 15) {
-                let row = 0;
-                for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
-                    let windowId = Math.abs(worldX * 17 + col * 7 + row * 13);
-                    if (windowId % 3 !== 0) {
-                        ctx.fillRect(wx, wy, 8, 10);
+            if (currentTheme === 'CITY_NIGHT') {
+                // Lit windows at night
+                ctx.fillStyle = '#f1c40f';
+                let col = 0;
+                for (let wx = rx + 8; wx < rx + 50; wx += 15) {
+                    let row = 0;
+                    for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
+                        let windowId = Math.abs(worldX * 17 + col * 7 + row * 13);
+                        if (windowId % 3 !== 0) {
+                            ctx.fillRect(wx, wy, 8, 10);
+                        }
+                        row++;
                     }
-                    row++;
+                    col++;
                 }
-                col++;
+            } else if (currentTheme === 'CITY_DAY') {
+                // White/blue windows in day
+                ctx.fillStyle = 'rgba(200, 220, 240, 0.6)';
+                let col = 0;
+                for (let wx = rx + 8; wx < rx + 50; wx += 15) {
+                    let row = 0;
+                    for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
+                        let windowId = Math.abs(worldX * 17 + col * 7 + row * 13);
+                        if (windowId % 3 !== 0) {
+                            ctx.fillRect(wx, wy, 8, 10);
+                        }
+                        row++;
+                    }
+                    col++;
+                }
             }
-            ctx.fillStyle = color;
         }
+    }
+    
+    // Haze overlay for background buildings
+    if (isHaze) {
+        ctx.fillStyle = 'rgba(150, 180, 200, 0.15)';
+        ctx.fillRect(0, canvas.height - h - 50, canvas.width, h + 50);
     }
 }
 
