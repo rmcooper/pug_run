@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pug Run: Treat Collector </title>
-    <!-- Version 1.0 -->
+    <title>Pug Run: Treat Collector</title>
+    <!-- Version 1.0.1 -->
     <style>
         * {
             box-sizing: border-box;
@@ -167,6 +167,7 @@ const maxLevels = 10;
 let totalTreats = 0;
 let levelStartTreats = 0; 
 let playerLives = 5;
+const maxLives = 5;
 let cameraX = 0;
 const levelWidth = 3200;
 
@@ -196,6 +197,7 @@ const THEMES = ['SUNNY', 'JUNGLE', 'WINTER', 'CITY_NIGHT', 'CITY_DAY'];
 let currentTheme = 'SUNNY';
 let platforms = [];
 let treats = [];
+let heartPickup = null; // Single heart pickup per level
 let enemies = [];
 let finishLine = { x: 0, y: 0, w: 40, h: 80 };
 
@@ -531,7 +533,7 @@ class Chihuahua {
     }
 }
 
-// --- MULTI-LAYER PARALLAX BACKGROUND DRAWING (ROBUST GLITCH-FREE) ---
+// --- MULTI-LAYER PARALLAX BACKGROUND DRAWING ---
 function drawParallaxBackground() {
     let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     
@@ -541,14 +543,9 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#cce8e4');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Layer 1: Sun & Clouds (Parallax 0.1)
             ctx.fillStyle = '#fff7b1'; ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
             drawClouds(0.1, '#ffffff');
-
-            // Layer 2: Far Rolling Green Hills (Parallax 0.18)
             drawDistantHills(0.18, '#81c784', 220, 45, 600);
-
-            // Layer 3: Closer Rolling Hills (Parallax 0.35)
             drawDistantHills(0.35, '#4caf50', 280, 35, 400);
             break;
 
@@ -613,8 +610,6 @@ function drawForegroundJungle() {
     }
 }
 
-// --- FIXED PARALLAX RENDERERS (PREVENTS POP-INS & GEOMETRY CLIPPING) ---
-
 function drawClouds(factor, color) {
     ctx.fillStyle = color;
     let loopWidth = 600;
@@ -629,7 +624,6 @@ function drawClouds(factor, color) {
     }
 }
 
-// Completely reworked to draw continuous sine hills without popping/clipping
 function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor);
@@ -699,7 +693,6 @@ function drawSkyline(factor, color, showLights, heightScale) {
 
     for (let x = -loopWidth; x < canvas.width + loopWidth; x += buildingWidth) {
         let rx = x - offset;
-        // Deterministic building height based on absolute X coordinate
         let worldX = Math.floor((rx + cameraX * factor) / buildingWidth);
         let h = heightScale + (Math.sin(worldX) * 60);
 
@@ -724,7 +717,9 @@ function drawSkyline(factor, color, showLights, heightScale) {
 function populateLevelObjects() {
     treats = [];
     enemies = [];
+    heartPickup = null;
     let validEnemyPlatforms = [];
+    let validHeartPlatforms = [];
 
     platforms.forEach(plat => {
         if (plat.y === 380 && plat.x > 400 && plat.x < levelWidth - 400) {
@@ -738,6 +733,9 @@ function populateLevelObjects() {
                 }
             }
         } else {
+            // Floating Platforms suitable for Heart Pickups
+            validHeartPlatforms.push(plat);
+
             if (plat.y === 280) {
                 treats.push({ x: plat.x + plat.w / 2, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
             } else if (plat.y === 180) {
@@ -746,6 +744,17 @@ function populateLevelObjects() {
             }
         }
     });
+
+    // Spawn 1 Heart Icon per level on a random elevated platform
+    if (validHeartPlatforms.length > 0) {
+        let heartPlat = validHeartPlatforms[Math.floor(Math.random() * validHeartPlatforms.length)];
+        heartPickup = {
+            x: heartPlat.x + heartPlat.w / 2,
+            y: heartPlat.y - 35,
+            collected: false,
+            floatOffset: Math.random() * 10
+        };
+    }
 
     let numEnemies = Math.floor(Math.random() * 3) + 1; 
     for (let i = 0; i < numEnemies; i++) {
@@ -840,6 +849,47 @@ function drawTreats() {
     });
 }
 
+// Render Red Heart Pickup
+function drawHeartPickup() {
+    if (!heartPickup || heartPickup.collected) return;
+
+    let time = Date.now() * 0.004;
+    let rx = heartPickup.x - cameraX;
+    let ry = heartPickup.y + Math.sin(time + heartPickup.floatOffset) * 5;
+
+    // Pulse / Glow Effect
+    ctx.save();
+    ctx.translate(rx, ry);
+
+    ctx.fillStyle = '#e74c3c';
+    ctx.beginPath();
+    ctx.arc(-5, -4, 6, Math.PI, 0);
+    ctx.arc(5, -4, 6, Math.PI, 0);
+    ctx.lineTo(0, 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // Shine Highlight
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(-4, -5, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    // Heart Pickup Collision Logic
+    if (player.x < heartPickup.x + 18 && player.x + player.w > heartPickup.x - 18 &&
+        player.y < ry + 18 && player.y + player.h > ry - 18) {
+        
+        heartPickup.collected = true;
+        if (playerLives < maxLives) {
+            playerLives++;
+        }
+        totalTreats += 10; // Bonus treats for collecting extra life
+        updateHUD();
+    }
+}
+
 function handleEnemies() {
     enemies.forEach(e => {
         e.update();
@@ -880,6 +930,7 @@ function gameLoop() {
         drawParallaxBackground();
         drawPlatforms();
         drawTreats();
+        drawHeartPickup();
         handleEnemies();
         drawFinishLine();
         player.draw();
