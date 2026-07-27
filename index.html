@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pug Run: Treat Collector</title>
-    <!-- Version 1.0.3 -->
+    <title>Pug Run: Endless Treat Collector</title>
+    <!-- Version 1.0.4 -->
     <style>
         * {
             box-sizing: border-box;
@@ -129,14 +129,14 @@
         <div class="hud">
             <div id="treat-count">🦴 Treats: 0</div>
             <div id="lives-display">❤️ Lives: 5</div>
-            <div id="level-display">Level 1/10</div>
+            <div id="level-display">Level 1</div>
         </div>
     </div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
         <h1>Pug Run!</h1>
-        <p>Help the little pug collect treats and scare away feisty Chihuahuas by jumping on them across 10 levels!</p>
+        <p>Help the little pug collect treats and scare away feisty Chihuahuas across infinite randomized levels!</p>
         <button class="btn" onclick="startGame()">Start Game</button>
         <div class="controls-hint">Controls: Arrow Keys / WASD to move & jump</div>
     </div>
@@ -148,7 +148,7 @@
         <button class="btn" onclick="nextLevel()">Next Level</button>
     </div>
 
-    <!-- Game Over / Win Screen -->
+    <!-- Game Over Screen -->
     <div id="end-screen" class="overlay hidden">
         <h1 id="end-title">Game Over!</h1>
         <p id="end-desc">You ran out of lives!</p>
@@ -163,7 +163,6 @@ const ctx = canvas.getContext('2d');
 // --- GAME STATE ---
 let gameState = 'START'; 
 let currentLevel = 1;
-const maxLevels = 10;
 let totalTreats = 0;
 let levelStartTreats = 0; 
 let playerLives = 5;
@@ -238,7 +237,7 @@ const player = {
             this.vx = this.speed;
             this.facing = 'right';
         } else {
-            this.vx *= 0.7; // friction
+            this.vx *= 0.7; 
         }
 
         if (keys.up && this.grounded) {
@@ -270,7 +269,7 @@ const player = {
             }
         });
 
-        // Bottom Boundary (Loses Life only on falling)
+        // Bottom Boundary
         if (this.y > canvas.height + 100) {
             loseLife();
         }
@@ -556,7 +555,7 @@ function drawParallaxBackground() {
 
             drawDistantMountains(0.1, '#114136', 200, 400);
             drawDistantMountains(0.2, '#195b4e', 260, 300);
-            drawJungleCanopy(0.3, '#0b382d');
+            drawJungleCanopy(0.3, '#0b382d'); // Grounded solid foliage
             break;
 
         case 'WINTER':
@@ -588,25 +587,6 @@ function drawParallaxBackground() {
             drawSkyline(0.15, '#e67e22', false, 100);
             drawSkyline(0.3, '#d35400', false, 180);
             break;
-    }
-}
-
-function drawForegroundJungle() {
-    if (currentTheme !== 'JUNGLE') return;
-
-    ctx.fillStyle = '#062019'; 
-    let factor = 1.2; 
-    let loopWidth = 300;
-    let offset = (cameraX * factor) % loopWidth;
-
-    for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += loopWidth) {
-        let rx = x - offset;
-        ctx.beginPath();
-        ctx.arc(rx + 20, 440, 45, 0, Math.PI * 2);
-        ctx.arc(rx + 80, 430, 55, 0, Math.PI * 2);
-        ctx.arc(rx + 160, 445, 40, 0, Math.PI * 2);
-        ctx.arc(rx + 230, 435, 50, 0, Math.PI * 2);
-        ctx.fill();
     }
 }
 
@@ -659,12 +639,20 @@ function drawDistantMountains(factor, color, peakY, spacing) {
     ctx.fill();
 }
 
+// UPDATED: Extended rounded foliage shapes all the way down to bottom screen
 function drawJungleCanopy(factor, color) {
     ctx.fillStyle = color;
     let loopWidth = 400;
     let offset = (cameraX * factor) % loopWidth;
+
     for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += loopWidth) {
         let rx = x - offset;
+        
+        // Draw rounded tops with rectangular bases down to canvas.height
+        ctx.fillRect(rx - 10, 280, 120, canvas.height - 280);
+        ctx.fillRect(rx + 95, 260, 170, canvas.height - 260);
+        ctx.fillRect(rx + 245, 285, 130, canvas.height - 285);
+
         ctx.beginPath();
         ctx.arc(rx + 50, 280, 60, 0, Math.PI * 2);
         ctx.arc(rx + 180, 260, 85, 0, Math.PI * 2);
@@ -823,7 +811,7 @@ function loseLife() {
 function updateHUD() {
     document.getElementById('treat-count').innerText = `🦴 Treats: ${totalTreats}`;
     document.getElementById('lives-display').innerText = `❤️ Lives: ${playerLives}`;
-    document.getElementById('level-display').innerText = `Level ${currentLevel}/${maxLevels}`;
+    document.getElementById('level-display').innerText = `Level ${currentLevel}`;
 }
 
 // --- RENDERING & COLLISIONS ---
@@ -898,16 +886,14 @@ function handleEnemies() {
         if (e.scared) return;
         if (player.x < e.x + e.w && player.x + player.w > e.x && player.y < e.y + e.h && player.y + player.h > e.y) {
             
-            // Stomp Check: Pug lands on top of Chihuahua -> Bounces Chihuahua off-screen!
             if (player.vy > 0 && player.y + player.h - player.vy <= e.y + 8) {
                 e.scareAway();
                 player.vy = player.jumpPower * 0.8; 
                 totalTreats += 5; 
                 updateHUD();
             } else if (player.invincibleTimer <= 0) {
-                // Side / Ground Touch: Pug ONLY drops current level treats (NO life loss, Chihuahua stays on map)
                 totalTreats = levelStartTreats;
-                player.invincibleTimer = 60; // Brief invincibility window after hit
+                player.invincibleTimer = 60; 
                 updateHUD();
             }
         }
@@ -920,7 +906,7 @@ function drawFinishLine() {
     ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.moveTo(rx - 10, finishLine.y); ctx.lineTo(rx + finishLine.w / 2, finishLine.y - 30); ctx.lineTo(rx + finishLine.w + 10, finishLine.y); ctx.fill();
     ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.arc(rx + finishLine.w / 2, finishLine.y + finishLine.h, 18, Math.PI, 0); ctx.fill();
     if (player.x + player.w > finishLine.x && player.x < finishLine.x + finishLine.w) {
-        if (currentLevel < maxLevels) showLevelClear(); else showGameWin();
+        showLevelClear();
     }
 }
 
@@ -940,7 +926,6 @@ function gameLoop() {
         handleEnemies();
         drawFinishLine();
         player.draw();
-        drawForegroundJungle();
     }
     requestAnimationFrame(gameLoop);
 }
@@ -981,13 +966,6 @@ function nextLevel() {
 function showGameOver() {
     gameState = 'GAME_OVER';
     document.getElementById('end-desc').innerText = `You ran out of lives! Total treats banked: ${totalTreats}`;
-    document.getElementById('end-screen').classList.remove('hidden');
-}
-
-function showGameWin() {
-    gameState = 'WIN';
-    document.getElementById('end-title').innerText = `🐾 You Win! 🐾`;
-    document.getElementById('end-desc').innerText = `Amazing! Finished all 10 levels with ${totalTreats} treats!`;
     document.getElementById('end-screen').classList.remove('hidden');
 }
 
