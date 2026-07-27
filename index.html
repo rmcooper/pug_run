@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Endless Treat Collector</title>
-    <!-- Version 1.0.4 -->
+    <!-- Version 1.0.5 -->
     <style>
         * {
             box-sizing: border-box;
@@ -555,7 +555,7 @@ function drawParallaxBackground() {
 
             drawDistantMountains(0.1, '#114136', 200, 400);
             drawDistantMountains(0.2, '#195b4e', 260, 300);
-            drawJungleCanopy(0.3, '#0b382d'); // Grounded solid foliage
+            drawJungleCanopy(0.3, '#0b382d');
             break;
 
         case 'WINTER':
@@ -639,7 +639,6 @@ function drawDistantMountains(factor, color, peakY, spacing) {
     ctx.fill();
 }
 
-// UPDATED: Extended rounded foliage shapes all the way down to bottom screen
 function drawJungleCanopy(factor, color) {
     ctx.fillStyle = color;
     let loopWidth = 400;
@@ -648,7 +647,6 @@ function drawJungleCanopy(factor, color) {
     for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += loopWidth) {
         let rx = x - offset;
         
-        // Draw rounded tops with rectangular bases down to canvas.height
         ctx.fillRect(rx - 10, 280, 120, canvas.height - 280);
         ctx.fillRect(rx + 95, 260, 170, canvas.height - 260);
         ctx.fillRect(rx + 245, 285, 130, canvas.height - 285);
@@ -910,23 +908,51 @@ function drawFinishLine() {
     }
 }
 
-// --- GAME LOOP ---
-function gameLoop() {
+// --- FIXED TIMESTEP GAME LOOP ---
+// Guarantees exact same game speed on 60Hz, 144Hz, 240Hz, or laggy displays!
+let lastTime = performance.now();
+let accumulator = 0;
+const physicsStep = 1000 / 60; // Locked to 60 logic ticks per second (~16.67ms)
+
+function updateGameLogic() {
     if (gameState === 'PLAYING') {
         player.update();
+        
+        // Camera Tracking
         cameraX = player.x - 200;
         if (cameraX < 0) cameraX = 0;
         if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        drawParallaxBackground();
-        drawPlatforms();
-        drawTreats();
-        drawHeartPickup();
-        handleEnemies();
-        drawFinishLine();
-        player.draw();
     }
+}
+
+function renderGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    drawParallaxBackground();
+    drawPlatforms();
+    drawTreats();
+    drawHeartPickup();
+    handleEnemies();
+    drawFinishLine();
+    player.draw();
+}
+
+function gameLoop(now) {
+    let dt = now - lastTime;
+    lastTime = now;
+
+    // Cap delta time to prevent spiral of death on tab unfocus or lag spikes
+    if (dt > 250) dt = 250;
+
+    accumulator += dt;
+
+    // Step physics forward in fixed increments regardless of display refresh rate
+    while (accumulator >= physicsStep) {
+        updateGameLogic();
+        accumulator -= physicsStep;
+    }
+
+    renderGame();
     requestAnimationFrame(gameLoop);
 }
 
@@ -973,6 +999,7 @@ function restartGame() {
     startGame();
 }
 
+// Start Game Loop
 requestAnimationFrame(gameLoop);
 
 </script>
