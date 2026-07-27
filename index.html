@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
+    <!-- Version 1.0.14 -->
     <style>
         * {
             box-sizing: border-box;
@@ -233,30 +234,29 @@ let finishLine = { x: 0, y: 0, w: 40, h: 80 };
 let particles = [];
 
 class Particle {
-    constructor(x, y, type) {
+    constructor(x, y, type, color = null) {
         this.x = x;
         this.y = y;
         this.type = type;
+        this.color = color;
         this.life = 1.0;
         
         if (type === 'dust') {
             this.vx = (Math.random() - 0.5) * 2;
             this.vy = (Math.random() - 0.5) * 2 - 1;
             this.size = Math.random() * 3 + 1;
-            this.color = `rgba(255, 255, 255,`;
+            this.color = this.color || `rgba(255, 255, 255,`;
         } else if (type === 'snow') {
-            // Background snow
             this.vx = (Math.random() - 0.5) * 1;
             this.vy = Math.random() * 2 + 1;
             this.size = Math.random() * 4 + 2;
             this.color = `rgba(255, 255, 255,`;
         } else if (type === 'deep_snow') {
-            // Foreground snow: larger, slower, more transparent
             this.vx = (Math.random() - 0.5) * 1.5;
-            this.vy = Math.random() * 1.5 + 0.5; // Slower fall
+            this.vy = Math.random() * 1.5 + 0.5;
             this.size = Math.random() * 6 + 4;
             this.color = `rgba(255, 255, 255,`;
-            this.life = 1.0; // Lasts longer
+            this.life = 1.0;
         } else if (type === 'sparkle') {
             this.vx = (Math.random() - 0.5) * 4;
             this.vy = (Math.random() - 0.5) * 4;
@@ -270,6 +270,13 @@ class Particle {
             this.color = '#f1c40f';
             this.life = 0.8;
             this.wanderTimer = Math.random() * 100;
+        } else if (type === 'zzz') {
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = -0.5 - Math.random() * 0.5;
+            this.size = 10 + Math.random() * 4;
+            this.color = '#fff';
+            this.life = 1.5;
+            this.rotation = Math.random() * 0.5 - 0.25;
         }
     }
 
@@ -284,7 +291,6 @@ class Particle {
         
         if (this.type === 'deep_snow') {
             this.vx += Math.sin(Date.now() * 0.002 + this.x * 0.1) * 0.02;
-            // Reset if off screen
             if (this.y > canvas.height + 20) this.y = -20;
         }
 
@@ -294,13 +300,22 @@ class Particle {
                 this.vx = (Math.random() - 0.5) * 2;
                 this.vy = (Math.random() - 0.5) * 2;
             }
-            // Twinkle effect
             if (Math.random() > 0.9) this.life = 0.8; 
         }
     }
 
     draw() {
-        if (this.type === 'sparkle' || this.type === 'firefly') {
+        if (this.type === 'zzz') {
+            ctx.save();
+            ctx.translate(this.x - cameraX, this.y);
+            ctx.rotate(this.rotation);
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = Math.min(1, this.life);
+            ctx.font = `bold ${this.size}px sans-serif`;
+            ctx.fillText('Z', 0, 0);
+            ctx.restore();
+            ctx.globalAlpha = 1.0;
+        } else if (this.type === 'sparkle' || this.type === 'firefly') {
             ctx.fillStyle = this.color;
             ctx.globalAlpha = this.life;
             ctx.shadowBlur = 10;
@@ -336,6 +351,8 @@ const player = {
     animTimer: 0,
     invincibleTimer: 0,
     dustTimer: 0,
+    idleTimer: 0,
+    isSleeping: false,
 
     reset(x, y) {
         this.x = x;
@@ -344,6 +361,8 @@ const player = {
         this.vy = 0;
         this.grounded = false;
         this.invincibleTimer = 60; 
+        this.idleTimer = 0;
+        this.isSleeping = false;
         particles = [];
     },
 
@@ -364,9 +383,8 @@ const player = {
         if (keys.up && this.grounded) {
             this.vy = this.jumpPower;
             this.grounded = false;
-            // Add dust on jump
             for(let i=0; i<5; i++) {
-                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust'));
+                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust', getDustColor()));
             }
         }
 
@@ -399,16 +417,30 @@ const player = {
             loseLife();
         }
 
+        // Idle & Sleep Logic
+        if (Math.abs(this.vx) > 0.2 && this.grounded) {
+            this.idleTimer = 0;
+            this.isSleeping = false;
+        } else if (this.grounded) {
+            this.idleTimer++;
+            if (this.idleTimer > 600) { // 10 seconds at 60fps
+                this.isSleeping = true;
+                // Spawn Zzz occasionally
+                if (Math.random() > 0.95) {
+                    particles.push(new Particle(this.x + this.w/2, this.y, 'zzz'));
+                }
+            }
+        }
+
         // Animation timing
         if (Math.abs(this.vx) > 0.2 && this.grounded) {
             this.animTimer++;
             if (this.animTimer % 12 === 0) {
                 this.animFrame = (this.animFrame + 1) % 2;
             }
-            // Run dust
             this.dustTimer++;
             if (this.dustTimer % 5 === 0) {
-                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust'));
+                particles.push(new Particle(this.x + this.w/2, this.y + this.h, 'dust', getDustColor()));
             }
         } else {
             this.animFrame = 0;
@@ -429,70 +461,100 @@ const player = {
         const darkMaskColor = '#2c2523'; 
         const detailColor = '#b59a5b'; 
 
-        // Body
-        ctx.fillStyle = coatColor;
-        ctx.beginPath();
-        ctx.roundRect(-16, -8, 28, 18, 6);
-        ctx.fill();
+        if (this.isSleeping) {
+            // Sleeping Pug (Curled up)
+            ctx.fillStyle = coatColor;
+            ctx.beginPath();
+            ctx.roundRect(-14, -4, 24, 16, 8);
+            ctx.fill();
+            
+            // Closed eyes
+            ctx.strokeStyle = darkMaskColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(6, -8);
+            ctx.quadraticCurveTo(10, -6, 14, -8);
+            ctx.stroke();
+            
+            // Tiny tail
+            ctx.strokeStyle = detailColor;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(-14, -2, 3, 0, Math.PI * 1.5);
+            ctx.stroke();
+            
+            // Muzzle hint
+            ctx.fillStyle = darkMaskColor;
+            ctx.beginPath();
+            ctx.roundRect(8, -2, 8, 6, 3);
+            ctx.fill();
+        } else {
+            // Active Pug
+            // Body
+            ctx.fillStyle = coatColor;
+            ctx.beginPath();
+            ctx.roundRect(-16, -8, 28, 18, 6);
+            ctx.fill();
 
-        // Legs
-        ctx.fillStyle = detailColor;
-        let legOffset = this.animFrame === 1 ? 3 : 0;
-        ctx.fillRect(-12 + legOffset, 8, 6, 8);
-        ctx.fillRect(4 - legOffset, 8, 6, 8);
+            // Legs
+            ctx.fillStyle = detailColor;
+            let legOffset = this.animFrame === 1 ? 3 : 0;
+            ctx.fillRect(-12 + legOffset, 8, 6, 8);
+            ctx.fillRect(4 - legOffset, 8, 6, 8);
 
-        // Curly Tail
-        ctx.strokeStyle = detailColor;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(-16, -6, 4, 0, Math.PI * 1.5);
-        ctx.stroke();
+            // Curly Tail
+            ctx.strokeStyle = detailColor;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(-16, -6, 4, 0, Math.PI * 1.5);
+            ctx.stroke();
 
-        // Integrated Head
-        ctx.fillStyle = coatColor;
-        ctx.beginPath();
-        ctx.moveTo(-1, -6); 
-        ctx.quadraticCurveTo(0, -18, 8, -19); 
-        ctx.quadraticCurveTo(16, -19, 18, -12); 
-        ctx.quadraticCurveTo(19, -5, 15, -1); 
-        ctx.quadraticCurveTo(8, 2, 0, -1); 
-        ctx.closePath();
-        ctx.fill();
+            // Integrated Head
+            ctx.fillStyle = coatColor;
+            ctx.beginPath();
+            ctx.moveTo(-1, -6); 
+            ctx.quadraticCurveTo(0, -18, 8, -19); 
+            ctx.quadraticCurveTo(16, -19, 18, -12); 
+            ctx.quadraticCurveTo(19, -5, 15, -1); 
+            ctx.quadraticCurveTo(8, 2, 0, -1); 
+            ctx.closePath();
+            ctx.fill();
 
-        // Black Muzzle
-        ctx.fillStyle = darkMaskColor;
-        ctx.beginPath();
-        ctx.roundRect(8, -7, 10, 10, 4);
-        ctx.fill();
+            // Black Muzzle
+            ctx.fillStyle = darkMaskColor;
+            ctx.beginPath();
+            ctx.roundRect(8, -7, 10, 10, 4);
+            ctx.fill();
 
-        // Nose
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(16, -4, 1.8, 0, Math.PI * 2);
-        ctx.fill();
+            // Nose
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(16, -4, 1.8, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Ears
-        ctx.fillStyle = darkMaskColor;
-        ctx.beginPath();
-        ctx.ellipse(3, -16, 4, 7, Math.PI / 5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(11, -15, 3.5, 6, -Math.PI / 10, 0, Math.PI * 2);
-        ctx.fill();
+            // Ears
+            ctx.fillStyle = darkMaskColor;
+            ctx.beginPath();
+            ctx.ellipse(3, -16, 4, 7, Math.PI / 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(11, -15, 3.5, 6, -Math.PI / 10, 0, Math.PI * 2);
+            ctx.fill();
 
-        // Eyes
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(10, -11, 4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.arc(11.5, -11, 2.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(12.5, -12, 1, 0, Math.PI * 2);
-        ctx.fill();
+            // Eyes
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(10, -11, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(11.5, -11, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(12.5, -12, 1, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         ctx.restore();
     }
@@ -681,6 +743,7 @@ function drawParallaxBackground() {
             
             drawClouds(0.1, '#ffffff');
             drawDistantHills(0.18, '#81c784', 220, 45, 600);
+            drawHillTrees(0.25, '#2e7d32'); // Added trees to hills
             drawDistantHills(0.35, '#4caf50', 280, 35, 400);
             break;
 
@@ -706,15 +769,14 @@ function drawParallaxBackground() {
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             drawDistantMountains(0.1, '#7f8c8d', 180, 400);
-            drawClouds(0.15, 'rgba(255, 255, 255, 0.1)'); // Very transparent clouds
+            drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
             drawDistantMountains(0.2, '#bdc3c7', 250, 300);
             drawPineTrees(0.3, '#2c3e50');
             
-            // Snow Particles (Background)
+            // Snow Particles
             if (Math.random() > 0.7) {
                 particles.push(new Particle(cameraX + Math.random() * canvas.width, -10, 'snow'));
             }
-            // Deep Snow Particles (Foreground)
             if (Math.random() > 0.6) {
                 particles.push(new Particle(cameraX + Math.random() * canvas.width, -20, 'deep_snow'));
             }
@@ -737,7 +799,7 @@ function drawParallaxBackground() {
 
             ctx.fillStyle = '#f5f6fa'; ctx.beginPath(); ctx.arc(150, 70, 30, 0, Math.PI * 2); ctx.fill();
             
-            // Dark Clouds (Stars show through)
+            // Dark Clouds
             drawClouds(0.15, 'rgba(20, 30, 40, 0.6)');
             
             drawSkyline(0.15, '#111923', false, 120);
@@ -745,22 +807,14 @@ function drawParallaxBackground() {
             break;
 
         case 'CITY_DAY':
-            // Twilight sky to allow stars to show through clouds
+            // Twilight sky
             bgGradient.addColorStop(0, '#2c3e50');
             bgGradient.addColorStop(0.5, '#4ca1af');
             bgGradient.addColorStop(1, '#c4e0e5');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Stars (Behind clouds)
-            ctx.fillStyle = '#fff';
-            for(let i=0; i<40; i++) {
-                let sx = (Math.sin(i * 132) * 10000) % canvas.width;
-                let sy = (Math.cos(i * 456) * 10000) % (canvas.height * 0.7);
-                if (sx < 0) sx += canvas.width;
-                if (sy < 0) sy += canvas.height * 0.7;
-                ctx.fillRect(sx, sy, 1.5, 1.5);
-            }
-
+            // Stars REMOVED from daytime city as requested
+            
             // Semi-transparent Clouds
             drawClouds(0.2, 'rgba(255, 255, 255, 0.4)');
             
@@ -802,6 +856,30 @@ function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
     ctx.lineTo(canvas.width + 50, canvas.height);
     ctx.closePath();
     ctx.fill();
+}
+
+// Added trees to hills
+function drawHillTrees(factor, color) {
+    ctx.fillStyle = color;
+    let loopWidth = 500;
+    let offset = (cameraX * factor) % loopWidth;
+    let hillBaseY = 220; // Matches SUNNY hills baseY
+
+    for (let x = -loopWidth; x < canvas.width + loopWidth; x += 70) {
+        let rx = x - offset;
+        let worldX = rx + cameraX * factor;
+        let hillHeight = Math.sin(worldX / 600 * Math.PI * 2) * 45;
+        let treeY = hillBaseY + hillHeight;
+        
+        // Tree trunk
+        ctx.fillRect(rx + 10, treeY - 15, 4, 15);
+        // Tree foliage
+        ctx.beginPath();
+        ctx.moveTo(rx, treeY - 15);
+        ctx.lineTo(rx + 12, treeY - 40);
+        ctx.lineTo(rx + 24, treeY - 15);
+        ctx.fill();
+    }
 }
 
 function drawDistantMountains(factor, color, peakY, spacing) {
@@ -871,11 +949,11 @@ function drawSkyline(factor, color, showLights, heightScale) {
         if (currentTheme === 'CITY_DAY') {
             ctx.fillStyle = 'rgba(255,255,255,0.1)';
             ctx.fillRect(rx, canvas.height - h, 65, h);
-            ctx.fillStyle = color; // Reset
+            ctx.fillStyle = color; 
         } else if (currentTheme === 'CITY_NIGHT') {
             ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(rx, canvas.height - h, 10, h); // Side shadow
-            ctx.fillStyle = color; // Reset
+            ctx.fillRect(rx, canvas.height - h, 10, h); 
+            ctx.fillStyle = color; 
         }
 
         // Windows
@@ -899,6 +977,16 @@ function drawSkyline(factor, color, showLights, heightScale) {
 }
 
 // --- LEVEL GENERATION & RANDOMIZATION ---
+
+function getDustColor() {
+    switch (currentTheme) {
+        case 'SUNNY': return 'rgba(141, 85, 36,';
+        case 'JUNGLE': return 'rgba(44, 62, 80,';
+        case 'WINTER': return 'rgba(236, 240, 241,';
+        case 'CITY_NIGHT': case 'CITY_DAY': return 'rgba(127, 140, 141,';
+        default: return 'rgba(255, 255, 255,';
+    }
+}
 
 function populateLevelObjects() {
     treats = [];
@@ -1049,7 +1137,6 @@ function drawTreats() {
         
         if (player.x < t.x + 15 && player.x + player.w > t.x - 15 && player.y < ry + 15 && player.y + player.h > ry - 15) {
             t.collected = true; totalTreats++; updateHUD();
-            // Sparkle effect
             for(let i=0; i<8; i++) {
                 particles.push(new Particle(t.x, t.y, 'sparkle'));
             }
