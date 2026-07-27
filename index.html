@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Treat Collector</title>
-    <!-- Version 1.0.2 -->
+    <!-- Version 1.0.3 -->
     <style>
         * {
             box-sizing: border-box;
@@ -270,7 +270,7 @@ const player = {
             }
         });
 
-        // Bottom Boundary
+        // Bottom Boundary (Loses Life only on falling)
         if (this.y > canvas.height + 100) {
             loseLife();
         }
@@ -687,7 +687,6 @@ function drawPineTrees(factor, color) {
     }
 }
 
-// FIXED: Deterministic window lighting prevents flickering/blanking on leftward scroll
 function drawSkyline(factor, color, showLights, heightScale) {
     ctx.fillStyle = color;
     let buildingWidth = 80;
@@ -696,8 +695,6 @@ function drawSkyline(factor, color, showLights, heightScale) {
 
     for (let x = -loopWidth; x < canvas.width + loopWidth; x += buildingWidth) {
         let rx = x - offset;
-        
-        // Compute fixed world building index
         let worldX = Math.floor((rx + cameraX * factor) / buildingWidth);
         let h = heightScale + (Math.sin(worldX * 1.5) * 60);
 
@@ -709,7 +706,6 @@ function drawSkyline(factor, color, showLights, heightScale) {
             for (let wx = rx + 8; wx < rx + 50; wx += 15) {
                 let row = 0;
                 for (let wy = canvas.height - h + 10; wy < canvas.height - 20; wy += 20) {
-                    // Use worldX, row, and col to lock window state permanently in place
                     let windowId = Math.abs(worldX * 17 + col * 7 + row * 13);
                     if (windowId % 3 !== 0) {
                         ctx.fillRect(wx, wy, 8, 10);
@@ -718,7 +714,7 @@ function drawSkyline(factor, color, showLights, heightScale) {
                 }
                 col++;
             }
-            ctx.fillStyle = color; // Reset fill
+            ctx.fillStyle = color;
         }
     }
 }
@@ -901,13 +897,18 @@ function handleEnemies() {
         e.draw();
         if (e.scared) return;
         if (player.x < e.x + e.w && player.x + player.w > e.x && player.y < e.y + e.h && player.y + player.h > e.y) {
+            
+            // Stomp Check: Pug lands on top of Chihuahua -> Bounces Chihuahua off-screen!
             if (player.vy > 0 && player.y + player.h - player.vy <= e.y + 8) {
                 e.scareAway();
                 player.vy = player.jumpPower * 0.8; 
                 totalTreats += 5; 
                 updateHUD();
             } else if (player.invincibleTimer <= 0) {
-                loseLife();
+                // Side / Ground Touch: Pug ONLY drops current level treats (NO life loss, Chihuahua stays on map)
+                totalTreats = levelStartTreats;
+                player.invincibleTimer = 60; // Brief invincibility window after hit
+                updateHUD();
             }
         }
     });
