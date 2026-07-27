@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.21 -->
+    <!-- Version 1.0.22 -->
     <style>
         * {
             box-sizing: border-box;
@@ -932,7 +932,7 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
         let treeWidth = 30 + (Math.abs(Math.cos(treeIdx * 4.7)) * 20);
         let topY = groundY - treeHeight;
 
-        // Trunk - slightly translucent during snow for atmospheric haze depth
+        // Trunk
         ctx.fillStyle = hasSnow ? 'rgba(74, 46, 27, 0.45)' : '#4a2e1b';
         ctx.fillRect(rx + (treeWidth / 2) - 4, topY, 8, bottomY - topY);
 
@@ -950,20 +950,20 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
             ctx.closePath();
             ctx.fill();
 
-            // Precise White Snow Layer on top of branch parts
+            // Thinner, lighter Snow Cap
             if (hasSnow) {
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2.2), tierY + 18);
+                ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2.3), tierY + 8);
                 ctx.lineTo(rx + treeWidth / 2, tierY - 25);
-                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.2), tierY + 18);
-                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.8), tierY + 23);
-                ctx.lineTo(rx + treeWidth / 2, tierY - 12);
-                ctx.lineTo(rx + (treeWidth / 2) - (tierWidth / 2.8), tierY + 23);
+                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.3), tierY + 8);
+                ctx.lineTo(rx + (treeWidth / 2) + (tierWidth / 2.8), tierY + 12);
+                ctx.lineTo(rx + treeWidth / 2, tierY - 18);
+                ctx.lineTo(rx + (treeWidth / 2) - (tierWidth / 2.8), tierY + 12);
                 ctx.closePath();
                 ctx.fill();
 
-                // Tree haze overlay to soften the green foliage into the snow storm
+                // Tree haze overlay
                 ctx.fillStyle = 'rgba(236, 240, 241, 0.28)';
                 ctx.beginPath();
                 ctx.moveTo(rx + (treeWidth / 2) - (tierWidth / 2), tierY + 30);
