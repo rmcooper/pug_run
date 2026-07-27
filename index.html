@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.22 -->
+    <!-- Version 1.0.24 -->
     <style>
         * {
             box-sizing: border-box;
@@ -97,17 +97,28 @@
         .overlay h1 {
             font-size: 48px;
             color: #f1c40f;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             text-shadow: 3px 3px 0 #000;
             letter-spacing: -1px;
         }
 
         .overlay p {
-            font-size: 18px;
-            margin-bottom: 25px;
-            max-width: 500px;
-            line-height: 1.6;
+            font-size: 16px;
+            margin-bottom: 15px;
+            max-width: 520px;
+            line-height: 1.5;
             color: #e0e0e0;
+        }
+
+        .overlay p.instructions {
+            font-size: 13.5px;
+            color: #b0b0b0;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 18px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            line-height: 1.6;
         }
 
         .btn {
@@ -141,7 +152,7 @@
         }
 
         .controls-hint {
-            margin-top: 20px;
+            margin-top: 15px;
             font-size: 13px;
             color: #888;
             background: rgba(255,255,255,0.05);
@@ -158,6 +169,7 @@
     <div id="ui-layer">
         <div class="hud">
             <div id="treat-count">🦴 <span>0</span></div>
+            <div id="timer-display">⏱️ <span>0.0s</span></div>
             <div id="level-display">LVL 1</div>
             <div id="lives-display">❤️ <span>5</span></div>
         </div>
@@ -166,7 +178,11 @@
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
         <h1>Pug Run!</h1>
-        <p>Explore beautiful worlds, collect treats, and bounce on Chihuahuas in this endless adventure.</p>
+        <p>Explore beautiful worlds, collect treats, and reach the doghouse in record time!</p>
+        <p class="instructions">
+            <strong>Goal:</strong> Collect as many bones as you can and reach the finish doghouse as fast as possible.<br>
+            <strong>Rules:</strong> Timer starts on your first move after landing. Jump on Chihuahuas to scare them off (touching them steals your bones). Falling into a gap resets the level attempt. Hearts grant extra lives (max 5).
+        </p>
         <button class="btn" onclick="startGame()">Start Adventure</button>
         <div class="controls-hint">Controls: Arrow Keys / WASD to move & jump</div>
     </div>
@@ -195,10 +211,14 @@ let gameState = 'START';
 let currentLevel = 1;
 let totalTreats = 0;
 let levelStartTreats = 0; 
+let levelTime = 0;
+let levelTimerStarted = false;
 let playerLives = 5;
 const maxLives = 5;
 let cameraX = 0;
 const levelWidth = 3200;
+const TARGET_BONES_PER_LEVEL = 25; // Constant target number of bones per level
+let levelTreatsLayout = [];
 
 // Keys State
 const keys = {
@@ -231,7 +251,6 @@ let heartPickup = null;
 let enemies = [];
 let finishLine = { x: 0, y: 0, w: 70, h: 70 };
 
-// --- PARTICLE SYSTEM ---
 let particles = [];
 
 class Particle {
@@ -335,7 +354,6 @@ class Particle {
     }
 }
 
-// --- PLAYER (PUG) ---
 const player = {
     x: 100,
     y: 200,
@@ -347,6 +365,7 @@ const player = {
     jumpPower: -13.5,
     gravity: 0.55,
     grounded: false,
+    initialLanded: false,
     facing: 'right',
     animFrame: 0,
     animTimer: 0,
@@ -361,6 +380,7 @@ const player = {
         this.vx = 0;
         this.vy = 0;
         this.grounded = false;
+        this.initialLanded = false;
         this.invincibleTimer = 60; 
         this.idleTimer = 0;
         this.isSleeping = false;
@@ -410,6 +430,7 @@ const player = {
                 this.y = p.y - this.h;
                 this.vy = 0;
                 this.grounded = true;
+                this.initialLanded = true;
             }
         });
 
@@ -427,7 +448,7 @@ const player = {
             if (this.idleTimer > 600) { // 10 seconds at 60fps
                 this.isSleeping = true;
                 if (Math.random() > 0.95) {
-                    particles.push(new Particle(this.x + this.w/2, this.y, 'zzz'));
+                    particles.push(new Particle(this.x + this.w/2, this.y + 10, 'zzz'));
                 }
             }
         }
@@ -462,45 +483,68 @@ const player = {
         const detailColor = '#b59a5b'; 
 
         if (this.isSleeping) {
+            // Lying down body resting on the ground
             ctx.fillStyle = coatColor;
             ctx.beginPath();
-            ctx.roundRect(-14, -4, 24, 16, 8);
+            ctx.roundRect(-16, 0, 26, 14, 6);
             ctx.fill();
-            
-            ctx.strokeStyle = darkMaskColor;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(6, -8);
-            ctx.quadraticCurveTo(10, -6, 14, -8);
-            ctx.stroke();
-            
+
+            // Paws tucked underneath
+            ctx.fillStyle = detailColor;
+            ctx.fillRect(-12, 10, 8, 4);
+            ctx.fillRect(2, 10, 8, 4);
+
+            // Curled tail
             ctx.strokeStyle = detailColor;
             ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.arc(-14, -2, 3, 0, Math.PI * 1.5);
+            ctx.arc(-16, 2, 3, 0, Math.PI * 1.5);
             ctx.stroke();
-            
+
+            // Head resting forward on ground
+            ctx.fillStyle = coatColor;
+            ctx.beginPath();
+            ctx.roundRect(2, -2, 16, 14, 6);
+            ctx.fill();
+
+            // Unified Dark Mask on sleeping head
             ctx.fillStyle = darkMaskColor;
             ctx.beginPath();
-            ctx.roundRect(8, -2, 8, 6, 3);
+            ctx.roundRect(8, 1, 10, 11, 4);
             ctx.fill();
+
+            // Folded Ear
+            ctx.beginPath();
+            ctx.ellipse(4, -1, 3.5, 6, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Sleeping closed eye
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.arc(11, 5, 2.5, Math.PI, 0);
+            ctx.stroke();
         } else {
+            // Pug Body
             ctx.fillStyle = coatColor;
             ctx.beginPath();
             ctx.roundRect(-16, -8, 28, 18, 6);
             ctx.fill();
 
+            // Legs
             ctx.fillStyle = detailColor;
             let legOffset = this.animFrame === 1 ? 3 : 0;
             ctx.fillRect(-12 + legOffset, 8, 6, 8);
             ctx.fillRect(4 - legOffset, 8, 6, 8);
 
+            // Tail
             ctx.strokeStyle = detailColor;
             ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.arc(-16, -6, 4, 0, Math.PI * 1.5);
             ctx.stroke();
 
+            // Head Base
             ctx.fillStyle = coatColor;
             ctx.beginPath();
             ctx.moveTo(-1, -6); 
@@ -511,35 +555,39 @@ const player = {
             ctx.closePath();
             ctx.fill();
 
+            // Unified Dark Mask
             ctx.fillStyle = darkMaskColor;
             ctx.beginPath();
-            ctx.roundRect(8, -7, 10, 10, 4);
+            ctx.roundRect(4, -19, 14, 20, 5);
             ctx.fill();
 
+            // Black Nose
             ctx.fillStyle = '#000';
             ctx.beginPath();
-            ctx.arc(16, -4, 1.8, 0, Math.PI * 2);
+            ctx.arc(16.5, -4, 2, 0, Math.PI * 2);
             ctx.fill();
 
+            // Ears
             ctx.fillStyle = darkMaskColor;
             ctx.beginPath();
-            ctx.ellipse(3, -16, 4, 7, Math.PI / 5, 0, Math.PI * 2);
+            ctx.ellipse(2, -15, 4, 7, Math.PI / 5, 0, Math.PI * 2);
             ctx.fill();
             ctx.beginPath();
-            ctx.ellipse(11, -15, 3.5, 6, -Math.PI / 10, 0, Math.PI * 2);
+            ctx.ellipse(10, -15, 3.5, 6, -Math.PI / 10, 0, Math.PI * 2);
             ctx.fill();
 
+            // Eyes
             ctx.fillStyle = '#fff';
             ctx.beginPath();
-            ctx.arc(10, -11, 4, 0, Math.PI * 2);
+            ctx.arc(10, -10, 3.8, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#000';
             ctx.beginPath();
-            ctx.arc(11.5, -11, 2.2, 0, Math.PI * 2);
+            ctx.arc(11.2, -10, 2, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.beginPath();
-            ctx.arc(12.5, -12, 1, 0, Math.PI * 2);
+            ctx.arc(12.2, -11, 0.9, 0, Math.PI * 2);
             ctx.fill();
         }
 
@@ -547,7 +595,6 @@ const player = {
     }
 };
 
-// --- CHIHUAHUA ENEMY CLASS ---
 class Chihuahua {
     constructor(x, y, patrolRange) {
         this.x = x;
@@ -702,7 +749,6 @@ class Chihuahua {
     }
 }
 
-// --- MULTI-LAYER PARALLAX BACKGROUND DRAWING ---
 function drawParallaxBackground() {
     let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     
@@ -749,7 +795,7 @@ function drawParallaxBackground() {
             drawWinterMountains(0.10, '#10171e'); 
             drawParallaxTrees(0.22, '#2e7d32', true); 
             
-            // Heavy Blizzard Snow Haze Layer over the tree line
+            // Heavy Blizzard Snow Haze Layer
             ctx.fillStyle = 'rgba(220, 230, 242, 0.38)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -799,14 +845,12 @@ function drawParallaxBackground() {
             break;
     }
 
-    // --- UNIVERSAL ATMOSPHERIC HAZE LAYER ---
+    // Universal Haze Layer
     if (currentTheme !== 'WINTER') {
         ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 }
-
-// --- PARALLAX HELPER FUNCTIONS ---
 
 function drawClouds(factor, color) {
     ctx.fillStyle = color;
@@ -950,7 +994,7 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
             ctx.closePath();
             ctx.fill();
 
-            // Pillowy Soft Snow Mounds on top of branch parts
+            // Pillowy Soft Snow Mounds
             if (hasSnow) {
                 let midX = rx + treeWidth / 2;
                 let leftX = midX - (tierWidth / 2) - 2;
@@ -958,19 +1002,12 @@ function drawParallaxTrees(factor, foliageColor, hasSnow) {
 
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                // Start on far left branch tip
                 ctx.moveTo(leftX, tierY + 28);
-                // Soft pillowy bulge over left slope
                 ctx.quadraticCurveTo(midX - (tierWidth / 4), tierY - 18, midX, tierY - 28);
-                // Soft pillowy bulge over right slope
                 ctx.quadraticCurveTo(midX + (tierWidth / 4), tierY - 18, rightX, tierY + 28);
-                // Curved drape around right branch tip
                 ctx.quadraticCurveTo(rightX - 3, tierY + 33, rightX - 6, tierY + 28);
-                // Underside snow drape back to center
                 ctx.quadraticCurveTo(midX + (tierWidth / 4), tierY + 8, midX, tierY - 8);
-                // Underside snow drape back to left branch tip
                 ctx.quadraticCurveTo(midX - (tierWidth / 4), tierY + 8, leftX + 6, tierY + 28);
-                // Curved drape around left branch tip
                 ctx.quadraticCurveTo(leftX + 3, tierY + 33, leftX, tierY + 28);
                 ctx.closePath();
                 ctx.fill();
@@ -1065,8 +1102,6 @@ function drawSkyline(factor, color, isNight, heightScale, isBackground = false) 
     }
 }
 
-// --- LEVEL GENERATION & RANDOMIZATION ---
-
 function getDustColor() {
     switch (currentTheme) {
         case 'SUNNY': return 'rgba(141, 85, 36,';
@@ -1083,6 +1118,7 @@ function populateLevelObjects() {
     heartPickup = null;
     let validEnemyPlatforms = [];
     let validHeartPlatforms = [];
+    let candidateSpots = [];
 
     platforms.forEach(plat => {
         if (plat.y === 380 && plat.x > 400 && plat.x < levelWidth - 400) {
@@ -1090,22 +1126,44 @@ function populateLevelObjects() {
         }
 
         if (plat.h === 70) {
-            for (let t = plat.x + 60; t < plat.x + plat.w - 30; t += 90) {
-                if (Math.random() > 0.4) {
-                    treats.push({ x: t, y: 340, collected: false, floatOffset: Math.random() * 10 });
-                }
+            for (let t = plat.x + 50; t <= plat.x + plat.w - 50; t += 70) {
+                candidateSpots.push({ x: t, y: 340 });
             }
         } else {
             validHeartPlatforms.push(plat);
 
             if (plat.y === 280) {
-                treats.push({ x: plat.x + plat.w / 2, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
+                candidateSpots.push({ x: plat.x + plat.w / 2, y: plat.y - 35 });
             } else if (plat.y === 180) {
-                treats.push({ x: plat.x + 20, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
-                treats.push({ x: plat.x + plat.w - 20, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
+                candidateSpots.push({ x: plat.x + 25, y: plat.y - 35 });
+                candidateSpots.push({ x: plat.x + plat.w - 25, y: plat.y - 35 });
             }
         }
     });
+
+    candidateSpots.sort((a, b) => a.x - b.x);
+
+    let chosenSpots = [];
+    if (candidateSpots.length <= TARGET_BONES_PER_LEVEL) {
+        chosenSpots = candidateSpots;
+    } else {
+        let bucketSize = candidateSpots.length / TARGET_BONES_PER_LEVEL;
+        for (let i = 0; i < TARGET_BONES_PER_LEVEL; i++) {
+            let startIdx = Math.floor(i * bucketSize);
+            let endIdx = Math.floor((i + 1) * bucketSize);
+            let chosenIdx = startIdx + Math.floor(Math.random() * (endIdx - startIdx));
+            chosenSpots.push(candidateSpots[chosenIdx]);
+        }
+    }
+
+    treats = chosenSpots.map(spot => ({
+        x: spot.x,
+        y: spot.y,
+        collected: false,
+        floatOffset: Math.random() * 10
+    }));
+
+    levelTreatsLayout = treats.map(t => ({ x: t.x, y: t.y, floatOffset: t.floatOffset }));
 
     if (validHeartPlatforms.length > 0) {
         let heartPlat = validHeartPlatforms[Math.floor(Math.random() * validHeartPlatforms.length)];
@@ -1127,10 +1185,25 @@ function populateLevelObjects() {
     }
 }
 
+function resetLevelPickups() {
+    treats = levelTreatsLayout.map(t => ({
+        x: t.x,
+        y: t.y,
+        collected: false,
+        floatOffset: t.floatOffset
+    }));
+    if (heartPickup) heartPickup.collected = false;
+    enemies.forEach(e => {
+        e.x = e.startX;
+        e.scared = false;
+        e.vy = 0;
+        e.vx = Math.abs(e.vx);
+    });
+}
+
 function generateLevel() {
     platforms = [];
     
-    // Pick a random theme, ensuring it doesn't repeat the previous one
     let availableThemes = THEMES.filter(t => t !== lastTheme);
     currentTheme = availableThemes[Math.floor(Math.random() * availableThemes.length)];
     lastTheme = currentTheme;
@@ -1170,23 +1243,34 @@ function generateLevel() {
 function loseLife() {
     playerLives--;
     totalTreats = levelStartTreats;
+    levelTime = 0; 
+    levelTimerStarted = false;
     updateHUD();
 
     if (playerLives <= 0) {
         showGameOver();
     } else {
-        populateLevelObjects();
+        resetLevelPickups();
         player.reset(100, 200);
     }
 }
 
+function formatTime(sec) {
+    let m = Math.floor(sec / 60);
+    let s = (sec % 60).toFixed(1);
+    if (m > 0) {
+        return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+    return `${s}s`;
+}
+
 function updateHUD() {
     document.getElementById('treat-count').innerHTML = `🦴 <span>${totalTreats}</span>`;
+    document.getElementById('timer-display').innerHTML = `⏱️ <span>${formatTime(levelTime)}</span>`;
     document.getElementById('lives-display').innerHTML = `❤️ <span>${playerLives}</span>`;
     document.getElementById('level-display').innerText = `LVL ${currentLevel}`;
 }
 
-// --- RENDERING & COLLISIONS ---
 function drawPlatforms() {
     platforms.forEach(p => {
         let rx = p.x - cameraX;
@@ -1267,7 +1351,6 @@ function drawHeartPickup() {
         if (playerLives < maxLives) {
             playerLives++;
         }
-        totalTreats += 10; 
         updateHUD();
         for(let i=0; i<10; i++) {
             particles.push(new Particle(heartPickup.x, heartPickup.y, 'sparkle'));
@@ -1330,7 +1413,7 @@ function drawFinishLine() {
     ctx.roundRect(rx + 20, ry + 8, 30, 8, 4);
     ctx.fill();
 
-    // Trigger Win only when pug enters opening
+    // Trigger Win
     let pugCenterX = player.x + player.w / 2;
     let doorWorldLeft = finishLine.x + 20;
     let doorWorldRight = finishLine.x + 50;
@@ -1340,7 +1423,6 @@ function drawFinishLine() {
     }
 }
 
-// --- FIXED TIMESTEP GAME LOOP ---
 let lastTime = performance.now();
 let accumulator = 0;
 const physicsStep = 1000 / 60;
@@ -1348,6 +1430,18 @@ const physicsStep = 1000 / 60;
 function updateGameLogic() {
     if (gameState === 'PLAYING') {
         player.update();
+
+        // Start timer on movement input ONLY AFTER initial landing on ground
+        if (!levelTimerStarted && player.initialLanded) {
+            if (keys.left || keys.right || keys.up || Math.abs(player.vx) > 0.1) {
+                levelTimerStarted = true;
+            }
+        }
+
+        if (levelTimerStarted && !player.isSleeping) {
+            levelTime += physicsStep / 1000;
+        }
+        updateHUD();
         
         // Camera Tracking
         cameraX = player.x - 200;
@@ -1374,9 +1468,7 @@ function renderGame() {
     handleEnemies();
     drawFinishLine();
     
-    // Draw Particles
     particles.forEach(p => p.draw());
-    
     player.draw();
 }
 
@@ -1397,10 +1489,11 @@ function gameLoop(now) {
     requestAnimationFrame(gameLoop);
 }
 
-// --- STATE MANAGEMENT ---
 function startGame() {
     totalTreats = 0; 
     levelStartTreats = 0;
+    levelTime = 0;
+    levelTimerStarted = false;
     playerLives = 5; 
     currentLevel = 1; 
     lastTheme = null;
@@ -1413,14 +1506,17 @@ function startGame() {
 
 function loadLevel(lvl) {
     levelStartTreats = totalTreats; 
+    levelTime = 0;
+    levelTimerStarted = false;
     updateHUD();
     generateLevel();
 }
 
 function showLevelClear() {
     gameState = 'LEVEL_CLEAR';
+    let treatsInLevel = totalTreats - levelStartTreats;
     document.getElementById('level-title').innerText = `Level ${currentLevel} Complete!`;
-    document.getElementById('level-desc').innerText = `You've collected ${totalTreats} treats! Ready for the next world?`;
+    document.getElementById('level-desc').innerText = `⚡ Time: ${formatTime(levelTime)} | 🦴 Bones: ${treatsInLevel} / ${TARGET_BONES_PER_LEVEL}\nTotal Banked Bones: ${totalTreats}`;
     document.getElementById('level-screen').classList.remove('hidden');
 }
 
@@ -1441,9 +1537,7 @@ function restartGame() {
     startGame();
 }
 
-// Start Game Loop
 requestAnimationFrame(gameLoop);
-
 </script>
 </body>
 </html>
