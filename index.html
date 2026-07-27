@@ -59,6 +59,11 @@
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
         }
 
+        .hud-left {
+            display: flex;
+            gap: 20px;
+        }
+
         .overlay {
             position: absolute;
             top: 0;
@@ -126,7 +131,10 @@
     
     <div id="ui-layer">
         <div class="hud">
-            <div id="treat-count">🦴 Treats: 0</div>
+            <div class="hud-left">
+                <div id="lives-display">❤️ ❤️ ❤️ ❤️ ❤️</div>
+                <div id="treat-count">🦴 Treats: 0</div>
+            </div>
             <div id="level-display">Level 1/10</div>
         </div>
     </div>
@@ -134,7 +142,7 @@
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
         <h1>Pug Run!</h1>
-        <p>Help the little pug collect as many delicious dog treats as possible through 10 unique worlds!</p>
+        <p>Help the pug collect dog treats across 10 levels! Jump on barking Chihuahuas to scare them away.</p>
         <button class="btn" onclick="startGame()">Start Game</button>
         <div class="controls-hint">Controls: Arrow Keys / WASD to move & jump</div>
     </div>
@@ -149,7 +157,7 @@
     <!-- Game Over / Win Screen -->
     <div id="end-screen" class="overlay hidden">
         <h1 id="end-title">Game Over!</h1>
-        <p id="end-desc">You collected 0 treats!</p>
+        <p id="end-desc">You ran out of lives!</p>
         <button class="btn" onclick="restartGame()">Play Again</button>
     </div>
 </div>
@@ -167,13 +175,8 @@ let cameraX = 0;
 const levelWidth = 3200;
 
 // Keys State
-const keys = {
-    left: false,
-    right: false,
-    up: false
-};
+const keys = { left: false, right: false, up: false };
 
-// Listeners
 window.addEventListener('keydown', e => {
     if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
     if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
@@ -188,10 +191,10 @@ window.addEventListener('keyup', e => {
 
 // --- THEME DEFINITIONS ---
 const THEMES = ['SUNNY', 'JUNGLE', 'WINTER', 'CITY_NIGHT', 'CITY_DAY'];
-
 let currentTheme = 'SUNNY';
 let platforms = [];
 let treats = [];
+let enemies = [];
 let finishLine = { x: 0, y: 0, w: 40, h: 80 };
 
 // --- PLAYER (PUG) ---
@@ -202,13 +205,16 @@ const player = {
     h: 28,
     vx: 0,
     vy: 0,
-    speed: 4.5,
-    jumpPower: -10.5,
-    gravity: 0.45,
+    // Halved speed parameters for smoother, half-speed movement
+    speed: 2.25,
+    jumpPower: -7.5,
+    gravity: 0.28,
     grounded: false,
     facing: 'right',
     animFrame: 0,
     animTimer: 0,
+    lives: 5,
+    invulnerableTimer: 0,
 
     reset(x, y) {
         this.x = x;
@@ -218,7 +224,22 @@ const player = {
         this.grounded = false;
     },
 
+    takeDamage() {
+        if (this.invulnerableTimer > 0) return;
+        
+        this.lives--;
+        updateLivesHUD();
+        this.invulnerableTimer = 60; // 1 second invulnerability at 60fps
+        this.vy = -4; // Knockback jump
+
+        if (this.lives <= 0) {
+            showGameOver();
+        }
+    },
+
     update() {
+        if (this.invulnerableTimer > 0) this.invulnerableTimer--;
+
         // Movement
         if (keys.left) {
             this.vx = -this.speed;
@@ -261,13 +282,14 @@ const player = {
 
         // Bottom Boundary (Death / Reset)
         if (this.y > canvas.height + 100) {
-            this.reset(100, 200);
+            this.takeDamage();
+            this.reset(Math.max(100, cameraX + 50), 200);
         }
 
         // Animation timing
-        if (Math.abs(this.vx) > 0.5 && this.grounded) {
+        if (Math.abs(this.vx) > 0.3 && this.grounded) {
             this.animTimer++;
-            if (this.animTimer % 8 === 0) {
+            if (this.animTimer % 12 === 0) {
                 this.animFrame = (this.animFrame + 1) % 2;
             }
         } else {
@@ -276,26 +298,29 @@ const player = {
     },
 
     draw() {
+        if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer / 4) % 2 === 0) {
+            return; // Flashing effect on hit
+        }
+
         ctx.save();
         ctx.translate(this.x - cameraX + this.w / 2, this.y + this.h / 2);
         if (this.facing === 'left') {
             ctx.scale(-1, 1);
         }
 
-        // Draw Cute Procedural Pug
         // Body
-        ctx.fillStyle = '#d7be82'; // Fawn color
+        ctx.fillStyle = '#d7be82';
         ctx.beginPath();
         ctx.roundRect(-16, -10, 28, 18, 6);
         ctx.fill();
 
         // Legs
         ctx.fillStyle = '#b59a5b';
-        let legOffset = this.animFrame === 1 ? 3 : 0;
+        let legOffset = this.animFrame === 1 ? 2 : 0;
         ctx.fillRect(-12 + legOffset, 6, 6, 8);
         ctx.fillRect(4 - legOffset, 6, 6, 8);
 
-        // Curly Tail
+        // Tail
         ctx.strokeStyle = '#b59a5b';
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -320,13 +345,13 @@ const player = {
         ctx.arc(14, -4, 1.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Floppy Ears
+        // Ears
         ctx.fillStyle = '#2c2523';
         ctx.beginPath();
         ctx.ellipse(3, -13, 4, 6, Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // Big Eyes
+        // Eyes
         ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.arc(8, -9, 3.5, 0, Math.PI * 2);
@@ -335,7 +360,6 @@ const player = {
         ctx.beginPath();
         ctx.arc(9, -9, 2, 0, Math.PI * 2);
         ctx.fill();
-        // Eye Shine
         ctx.fillStyle = '#fff';
         ctx.beginPath();
         ctx.arc(10, -10, 0.8, 0, Math.PI * 2);
@@ -345,72 +369,207 @@ const player = {
     }
 };
 
+// --- CHIHUAHUA ENEMY CLASS ---
+class Chihuahua {
+    constructor(x, y, minX, maxX) {
+        this.x = x;
+        this.y = y;
+        this.w = 28;
+        this.h = 24;
+        this.minX = minX;
+        this.maxX = maxX;
+        this.speed = 0.75;
+        this.vx = this.speed;
+        this.facing = 'right';
+        this.barkTimer = Math.floor(Math.random() * 100);
+        this.isBarking = false;
+        this.scared = false; // Runs away off screen when stomped
+        this.scaredVy = 0;
+    }
+
+    scareAway() {
+        this.scared = true;
+        this.scaredVy = -5; // Hop up and fall away
+    }
+
+    update() {
+        if (this.scared) {
+            this.scaredVy += 0.3;
+            this.y += this.scaredVy;
+            this.x += (this.facing === 'left' ? 3 : -3);
+            return;
+        }
+
+        // Patrol Movement
+        this.x += this.vx;
+        if (this.x > this.maxX) {
+            this.x = this.maxX;
+            this.vx = -this.speed;
+            this.facing = 'left';
+        } else if (this.x < this.minX) {
+            this.x = this.minX;
+            this.vx = this.speed;
+            this.facing = 'right';
+        }
+
+        // Bark Routine
+        this.barkTimer++;
+        if (this.barkTimer % 180 < 45) {
+            this.isBarking = true;
+        } else {
+            this.isBarking = false;
+        }
+
+        // Interaction with Pug
+        if (!player.scared && player.x + player.w > this.x && player.x < this.x + this.w &&
+            player.y + player.h > this.y && player.y < this.y + this.h) {
+            
+            // Stomp Check: Landing on top of Chihuahua
+            if (player.vy > 0 && player.y + player.h <= this.y + 12) {
+                this.scareAway();
+                player.vy = player.jumpPower * 0.8; // Bounce off enemy
+            } else {
+                player.takeDamage();
+            }
+        }
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x - cameraX + this.w / 2, this.y + this.h / 2);
+
+        if (this.scared) {
+            ctx.scale(1, -1); // Upside down running away
+        } else if (this.facing === 'left') {
+            ctx.scale(-1, 1);
+        }
+
+        // Body (Tan/Chihuahua Color)
+        ctx.fillStyle = '#c8965d';
+        ctx.fillRect(-10, -6, 20, 12);
+
+        // Thin Legs
+        ctx.fillStyle = '#a6733c';
+        ctx.fillRect(-8, 6, 3, 6);
+        ctx.fillRect(5, 6, 3, 6);
+
+        // Trembling Tail
+        let tailShake = (Math.floor(Date.now() / 50) % 2) * 2;
+        ctx.strokeStyle = '#a6733c';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-10, -4);
+        ctx.lineTo(-14, -10 + tailShake);
+        ctx.stroke();
+
+        // Head
+        ctx.fillStyle = '#c8965d';
+        ctx.beginPath();
+        ctx.arc(8, -8, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Giant Pointy Ears
+        ctx.fillStyle = '#a6733c';
+        ctx.beginPath();
+        ctx.moveTo(4, -14);
+        ctx.lineTo(8, -22);
+        ctx.lineTo(12, -14);
+        ctx.fill();
+
+        // Snout & Mouth
+        ctx.fillStyle = '#c8965d';
+        ctx.fillRect(12, -8, 6, 5);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(16, -9, 2, 2); // Nose
+
+        // Big Bug Eyes
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(8, -10, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(9, -10, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bark Bubble Visual
+        if (this.isBarking && !this.scared) {
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 10px sans-serif';
+            ctx.fillText('BARK!', 12, -20);
+        }
+
+        ctx.restore();
+    }
+}
+
 // --- LEVEL GENERATION ---
 function generateLevel() {
     platforms = [];
     treats = [];
+    enemies = [];
 
     // Select random theme
     currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
 
-    // Base Floor platforms with gaps
     let x = 0;
     while (x < levelWidth) {
         let pWidth = 400 + Math.random() * 300;
         if (x === 0) pWidth = 600; // Safe start area
         
-        platforms.push({
-            x: x,
-            y: 380,
-            w: pWidth,
-            h: 70
-        });
+        let platY = 380;
+        platforms.push({ x: x, y: platY, w: pWidth, h: 70 });
 
-        // Spawn treats on main floor
+        // Treats on main floor
         for (let t = x + 100; t < x + pWidth - 50; t += 120) {
             if (Math.random() > 0.3) {
-                treats.push({ x: t, y: 340, collected: false, floatOffset: Math.random() * 10 });
+                treats.push({ x: t, y: platY - 40, collected: false, floatOffset: Math.random() * 10 });
             }
         }
 
         // Floating platforms above
         if (x > 300 && x < levelWidth - 400) {
-            let platY = 240 + (Math.random() * 60 - 30);
-            let platW = 120 + Math.random() * 100;
-            platforms.push({
-                x: x + 100,
-                y: platY,
-                w: platW,
-                h: 20
-            });
-
-            // Treat on floating platform
-            treats.push({ x: x + 100 + platW/2, y: platY - 35, collected: false, floatOffset: Math.random() * 10 });
+            let fPlatY = 240 + (Math.random() * 60 - 30);
+            let fPlatW = 120 + Math.random() * 100;
+            platforms.push({ x: x + 100, y: fPlatY, w: fPlatW, h: 20 });
+            treats.push({ x: x + 100 + fPlatW / 2, y: fPlatY - 35, collected: false, floatOffset: Math.random() * 10 });
         }
 
         x += pWidth + (100 + Math.random() * 120); // Gap
     }
 
     // Finish Goal Platform
-    finishLine = {
-        x: levelWidth - 200,
-        y: 300,
-        w: 60,
-        h: 80
-    };
-    platforms.push({
-        x: levelWidth - 300,
-        y: 380,
-        w: 300,
-        h: 70
-    });
+    finishLine = { x: levelWidth - 200, y: 300, w: 60, h: 80 };
+    platforms.push({ x: levelWidth - 300, y: 380, w: 300, h: 70 });
+
+    // Spawn 1 to 3 Chihuahuas across valid platforms
+    let numEnemies = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3 enemies
+    let validPlatforms = platforms.filter(p => p.x > 400 && p.w >= 200 && p.x < levelWidth - 400);
+
+    for (let i = 0; i < numEnemies && validPlatforms.length > 0; i++) {
+        let randIdx = Math.floor(Math.random() * validPlatforms.length);
+        let targetPlat = validPlatforms.splice(randIdx, 1)[0];
+
+        let enemyX = targetPlat.x + 50;
+        let minPatrol = targetPlat.x + 10;
+        let maxPatrol = targetPlat.x + targetPlat.w - 40;
+
+        enemies.push(new Chihuahua(enemyX, targetPlat.y - 24, minPatrol, maxPatrol));
+    }
 
     player.reset(100, 200);
 }
 
+function updateLivesHUD() {
+    let heartsStr = '';
+    for (let i = 0; i < 5; i++) {
+        heartsStr += i < player.lives ? '❤️ ' : '🖤 ';
+    }
+    document.getElementById('lives-display').innerText = heartsStr.trim();
+}
+
 // --- PARALLAX BACKGROUND DRAWING ---
 function drawParallaxBackground() {
-    // Layer 0: Sky
     let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     
     switch (currentTheme) {
@@ -419,14 +578,10 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#cce8e4');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Sun
             ctx.fillStyle = '#fff7b1';
             ctx.beginPath();
             ctx.arc(650, 80, 40, 0, Math.PI * 2);
             ctx.fill();
-
-            // Clouds (Parallax 0.1)
             drawClouds(0.1, '#ffffff');
             break;
 
@@ -435,8 +590,6 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#71b280');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Distant Jungle Trees (Parallax 0.2)
             drawDistantMountains(0.2, '#195b4e');
             break;
 
@@ -445,8 +598,6 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#000000');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Snow Mountains (Parallax 0.15)
             drawDistantMountains(0.15, '#7f8c8d');
             drawClouds(0.2, 'rgba(255, 255, 255, 0.6)');
             break;
@@ -456,14 +607,10 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#203a43');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Moon
             ctx.fillStyle = '#f5f6fa';
             ctx.beginPath();
             ctx.arc(150, 70, 30, 0, Math.PI * 2);
             ctx.fill();
-
-            // City Skyline (Parallax 0.2)
             drawSkyline(0.2, '#111923', true);
             break;
 
@@ -472,14 +619,11 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#f1c40f');
             ctx.fillStyle = bgGradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // City Skyline (Parallax 0.2)
             drawSkyline(0.2, '#d35400', false);
             break;
     }
 }
 
-// Background Helper Drawings
 function drawClouds(factor, color) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor) % 800;
@@ -509,7 +653,6 @@ function drawDistantMountains(factor, color) {
 function drawSkyline(factor, color, showLights) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor) % 600;
-    
     for (let x = -100; x < canvas.width + 200; x += 80) {
         let rx = x - offset;
         let h = 150 + (Math.sin(x) * 80);
@@ -524,7 +667,7 @@ function drawSkyline(factor, color, showLights) {
                     }
                 }
             }
-            ctx.fillStyle = color; // Reset
+            ctx.fillStyle = color;
         }
     }
 }
@@ -533,13 +676,11 @@ function drawSkyline(factor, color, showLights) {
 function drawPlatforms() {
     platforms.forEach(p => {
         let rx = p.x - cameraX;
-
-        // Dynamic styling based on theme
         switch (currentTheme) {
             case 'SUNNY':
-                ctx.fillStyle = '#5cd38c'; // Grass top
+                ctx.fillStyle = '#5cd38c';
                 ctx.fillRect(rx, p.y, p.w, 12);
-                ctx.fillStyle = '#8d5524'; // Dirt base
+                ctx.fillStyle = '#8d5524';
                 ctx.fillRect(rx, p.y + 12, p.w, p.h - 12);
                 break;
             case 'JUNGLE':
@@ -549,14 +690,14 @@ function drawPlatforms() {
                 ctx.fillRect(rx, p.y + 15, p.w, p.h - 15);
                 break;
             case 'WINTER':
-                ctx.fillStyle = '#ecf0f1'; // Snow top
+                ctx.fillStyle = '#ecf0f1';
                 ctx.fillRect(rx, p.y, p.w, 14);
                 ctx.fillStyle = '#34495e';
                 ctx.fillRect(rx, p.y + 14, p.w, p.h - 14);
                 break;
             case 'CITY_NIGHT':
             case 'CITY_DAY':
-                ctx.fillStyle = '#7f8c8d'; // Concrete
+                ctx.fillStyle = '#7f8c8d';
                 ctx.fillRect(rx, p.y, p.w, p.h);
                 ctx.fillStyle = '#95a5a6';
                 ctx.fillRect(rx, p.y, p.w, 6);
@@ -573,13 +714,10 @@ function drawTreats() {
         let rx = t.x - cameraX;
         let ry = t.y + Math.sin(time + t.floatOffset) * 4;
 
-        // Draw Dog Bone Treat
         ctx.fillStyle = '#f39c12';
         ctx.beginPath();
-        // Central bar
         ctx.roundRect(rx - 10, ry - 4, 20, 8, 3);
         ctx.fill();
-        // Bone Ends
         ctx.beginPath();
         ctx.arc(rx - 10, ry - 4, 5, 0, Math.PI * 2);
         ctx.arc(rx - 10, ry + 4, 5, 0, Math.PI * 2);
@@ -587,7 +725,6 @@ function drawTreats() {
         ctx.arc(rx + 10, ry + 4, 5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Treat Pickup Detection
         if (player.x < t.x + 15 && player.x + player.w > t.x - 15 &&
             player.y < ry + 15 && player.y + player.h > ry - 15) {
             t.collected = true;
@@ -600,11 +737,9 @@ function drawTreats() {
 function drawFinishLine() {
     let rx = finishLine.x - cameraX;
     
-    // Dog House Finish Goal
     ctx.fillStyle = '#e74c3c';
     ctx.fillRect(rx, finishLine.y, finishLine.w, finishLine.h);
     
-    // Roof
     ctx.fillStyle = '#c0392b';
     ctx.beginPath();
     ctx.moveTo(rx - 10, finishLine.y);
@@ -612,13 +747,11 @@ function drawFinishLine() {
     ctx.lineTo(rx + finishLine.w + 10, finishLine.y);
     ctx.fill();
 
-    // Doorway
     ctx.fillStyle = '#2c3e50';
     ctx.beginPath();
     ctx.arc(rx + finishLine.w / 2, finishLine.y + finishLine.h, 18, Math.PI, 0);
     ctx.fill();
 
-    // Check Win Level Condition
     if (player.x + player.w > finishLine.x && player.x < finishLine.x + finishLine.w) {
         if (currentLevel < maxLevels) {
             showLevelClear();
@@ -631,30 +764,35 @@ function drawFinishLine() {
 // --- GAME LOOP ---
 function gameLoop() {
     if (gameState === 'PLAYING') {
-        // Update
         player.update();
 
-        // Dynamic Camera Tracking Player
+        // Update enemies
+        enemies.forEach(e => e.update());
+
+        // Camera Tracking
         cameraX = player.x - 200;
         if (cameraX < 0) cameraX = 0;
         if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
 
-        // Render
+        // Render Frame
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawParallaxBackground();
         drawPlatforms();
         drawTreats();
         drawFinishLine();
+        enemies.forEach(e => e.draw());
         player.draw();
     }
 
     requestAnimationFrame(gameLoop);
 }
 
-// --- STATE MANAGEMENT & UI ---
+// --- STATE MANAGEMENT ---
 function startGame() {
     totalTreats = 0;
     currentLevel = 1;
+    player.lives = 5;
+    updateLivesHUD();
     document.getElementById('treat-count').innerText = `🦴 Treats: 0`;
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('end-screen').classList.add('hidden');
@@ -671,7 +809,7 @@ function loadLevel(lvl) {
 function showLevelClear() {
     gameState = 'LEVEL_CLEAR';
     document.getElementById('level-title').innerText = `Level ${currentLevel} Complete!`;
-    document.getElementById('level-desc').innerText = `You've collected ${totalTreats} treats so far! Keep going!`;
+    document.getElementById('level-desc').innerText = `You've collected ${totalTreats} treats so far!`;
     document.getElementById('level-screen').classList.remove('hidden');
 }
 
@@ -682,10 +820,17 @@ function nextLevel() {
     gameState = 'PLAYING';
 }
 
+function showGameOver() {
+    gameState = 'GAME_OVER';
+    document.getElementById('end-title').innerText = `Game Over!`;
+    document.getElementById('end-desc').innerText = `The Chihuahuas got you! Total treats collected: ${totalTreats}`;
+    document.getElementById('end-screen').classList.remove('hidden');
+}
+
 function showGameWin() {
     gameState = 'WIN';
     document.getElementById('end-title').innerText = `🐾 You Win! 🐾`;
-    document.getElementById('end-desc').innerText = `You helped the pug complete all 10 levels and collected a grand total of ${totalTreats} treats!`;
+    document.getElementById('end-desc').innerText = `You finished all 10 levels with ${totalTreats} treats and ${player.lives} lives remaining!`;
     document.getElementById('end-screen').classList.remove('hidden');
 }
 
@@ -693,7 +838,7 @@ function restartGame() {
     startGame();
 }
 
-// Start Game Loop
+// Start Main Game Loop
 requestAnimationFrame(gameLoop);
 
 </script>
