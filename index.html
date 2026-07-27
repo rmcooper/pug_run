@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.26 -->
+    <!-- Version 1.0.27 -->
     <style>
         * {
             box-sizing: border-box;
@@ -825,7 +825,8 @@ function drawParallaxBackground() {
 
             ctx.fillStyle = '#f5f6fa'; ctx.beginPath(); ctx.arc(150, 70, 30, 0, Math.PI * 2); ctx.fill();
             
-            drawClouds(0.15, 'rgba(20, 30, 40, 0.6)');
+            // Clouds drawn first so they sit behind all buildings and secondary ground
+            drawClouds(0.1, 'rgba(20, 30, 40, 0.6)');
             drawSkyline(0.15, '#111923', true, 260, true);  
             drawSkyline(0.3, '#1c2833', true, 200, false);
             drawSecondaryGround(0.5, '#243342'); 
