@@ -164,6 +164,7 @@ let gameState = 'START';
 let currentLevel = 1;
 const maxLevels = 10;
 let totalTreats = 0;
+let levelStartTreats = 0; // Tracks treats accumulated at the beginning of the current level/retry
 let playerLives = 5;
 let cameraX = 0;
 const levelWidth = 3200;
@@ -539,14 +540,9 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#cce8e4');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Layer 1: Sun & Clouds (Parallax 0.1)
             ctx.fillStyle = '#fff7b1'; ctx.beginPath(); ctx.arc(650, 80, 40, 0, Math.PI * 2); ctx.fill();
             drawClouds(0.1, '#ffffff');
-
-            // Layer 2: Distant Light Green Hills (Parallax 0.2)
             drawDistantHills(0.2, '#81c784', 220, 100);
-
-            // Layer 3: Closer Rolling Hills (Parallax 0.3)
             drawDistantHills(0.3, '#4caf50', 280, 60);
             break;
 
@@ -555,13 +551,8 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#71b280');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Layer 1: Sky & Far Canopy (Parallax 0.1)
             drawDistantMountains(0.1, '#114136', 200);
-
-            // Layer 2: Mid Jungle Trees (Parallax 0.2)
             drawDistantMountains(0.2, '#195b4e', 260);
-
-            // Layer 3: High Background Jungle Trees (Smooth, non-jittering)
             drawJungleCanopy(0.3, '#0b382d');
             break;
 
@@ -570,14 +561,9 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#4a6572');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Layer 1: Far Snowy Peaks (Parallax 0.1)
             drawDistantMountains(0.1, '#7f8c8d', 180);
             drawClouds(0.15, 'rgba(255, 255, 255, 0.4)');
-
-            // Layer 2: Mid Snowy Ridge (Parallax 0.2)
             drawDistantMountains(0.2, '#bdc3c7', 250);
-
-            // Layer 3: Snowy Pine Trees (Parallax 0.3)
             drawPineTrees(0.3, '#2c3e50');
             break;
 
@@ -586,13 +572,8 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#203a43');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Layer 1: Moon (Parallax 0.05)
             ctx.fillStyle = '#f5f6fa'; ctx.beginPath(); ctx.arc(150, 70, 30, 0, Math.PI * 2); ctx.fill();
-
-            // Layer 2: Far Silhouette Skyline (Parallax 0.15)
             drawSkyline(0.15, '#111923', false, 120);
-
-            // Layer 3: Mid Lit Skyline (Parallax 0.3)
             drawSkyline(0.3, '#1c2833', true, 200);
             break;
 
@@ -601,27 +582,22 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#f1c40f');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Layer 1: Distant City Towers (Parallax 0.15)
             drawSkyline(0.15, '#e67e22', false, 100);
-
-            // Layer 2: Mid City Buildings (Parallax 0.3)
             drawSkyline(0.3, '#d35400', false, 180);
             break;
     }
 }
 
-// Foreground Jungle Parallax (Draws in front of platforms at ground level)
 function drawForegroundJungle() {
     if (currentTheme !== 'JUNGLE') return;
 
-    ctx.fillStyle = '#062019'; // Deep foreground foliage color
-    let factor = 1.2; // Faster scrolling than the camera to give dramatic depth
+    ctx.fillStyle = '#062019'; 
+    let factor = 1.2; 
     let loopWidth = 300;
     let offset = (cameraX * factor) % loopWidth;
 
     for (let x = -loopWidth; x < canvas.width + loopWidth; x += loopWidth) {
         let rx = x - offset;
-        // Bush / Palm fronds along the bottom border (Y = 410 to 450, below platform ground at 380)
         ctx.beginPath();
         ctx.arc(rx + 20, 440, 45, 0, Math.PI * 2);
         ctx.arc(rx + 80, 430, 55, 0, Math.PI * 2);
@@ -631,7 +607,7 @@ function drawForegroundJungle() {
     }
 }
 
-// Parallax Helper Functions
+// Parallax Helpers
 function drawClouds(factor, color) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor) % 800;
@@ -713,13 +689,54 @@ function drawSkyline(factor, color, showLights, heightScale) {
     }
 }
 
-// --- LEVEL GENERATION ---
-function generateLevel() {
-    platforms = [];
+// --- LEVEL GENERATION & RANDOMIZATION ---
+
+// 1. Populates treats and enemies on existing platform geometry
+function populateLevelObjects() {
     treats = [];
     enemies = [];
-    currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
     let validEnemyPlatforms = [];
+
+    platforms.forEach(plat => {
+        // Find ground/floor platforms suitable for enemies
+        if (plat.y === 380 && plat.x > 400 && plat.x < levelWidth - 400) {
+            validEnemyPlatforms.push(plat);
+        }
+
+        // Spawn treats on platforms
+        if (plat.h === 70) {
+            // Main Floor Platform
+            for (let t = plat.x + 60; t < plat.x + plat.w - 30; t += 90) {
+                if (Math.random() > 0.4) {
+                    treats.push({ x: t, y: 340, collected: false, floatOffset: Math.random() * 10 });
+                }
+            }
+        } else {
+            // Floating Platforms
+            if (plat.y === 280) {
+                treats.push({ x: plat.x + plat.w / 2, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
+            } else if (plat.y === 180) {
+                treats.push({ x: plat.x + 20, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
+                treats.push({ x: plat.x + plat.w - 20, y: plat.y - 35, collected: false, floatOffset: Math.random() * 10 });
+            }
+        }
+    });
+
+    // Spawn 1 to 3 Chihuahuas on random valid platforms
+    let numEnemies = Math.floor(Math.random() * 3) + 1; 
+    for (let i = 0; i < numEnemies; i++) {
+        if (validEnemyPlatforms.length > 0) {
+            let idx = Math.floor(Math.random() * validEnemyPlatforms.length);
+            let targetPlat = validEnemyPlatforms.splice(idx, 1)[0];
+            enemies.push(new Chihuahua(targetPlat.x + 30, targetPlat.y - 26, targetPlat.w - 60));
+        }
+    }
+}
+
+// 2. Generates brand new platform geometry and theme (used on level load/next level)
+function generateLevel() {
+    platforms = [];
+    currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
 
     let x = 0;
     while (x < levelWidth) {
@@ -729,61 +746,46 @@ function generateLevel() {
         let plat = { x: x, y: 380, w: pWidth, h: 70 };
         platforms.push(plat);
 
-        if (x > 400 && x < levelWidth - 400) {
-            validEnemyPlatforms.push(plat);
-        }
-
-        // Treats on main floor
-        for (let t = x + 60; t < x + pWidth - 30; t += 90) {
-            if (Math.random() > 0.4) {
-                treats.push({ x: t, y: 340, collected: false, floatOffset: Math.random() * 10 });
-            }
-        }
-
         // Multi-tier floating platforms
         if (x > 250 && x < levelWidth - 400) {
             let midY = 280;
             let midW = 100 + Math.random() * 80;
             let midX = x + 30;
             platforms.push({ x: midX, y: midY, w: midW, h: 20 });
-            treats.push({ x: midX + midW / 2, y: midY - 35, collected: false, floatOffset: Math.random() * 10 });
 
             if (Math.random() > 0.4) {
                 let highY = 180;
                 let highW = 90 + Math.random() * 60;
                 let highX = midX + 40;
                 platforms.push({ x: highX, y: highY, w: highW, h: 20 });
-                treats.push({ x: highX + 20, y: highY - 35, collected: false, floatOffset: Math.random() * 10 });
-                treats.push({ x: highX + highW - 20, y: highY - 35, collected: false, floatOffset: Math.random() * 10 });
             }
         }
 
         x += pWidth + (80 + Math.random() * 50); 
     }
 
-    // Spawn Enemies
-    let numEnemies = Math.floor(Math.random() * 3) + 1; 
-    for (let i = 0; i < numEnemies; i++) {
-        if (validEnemyPlatforms.length > 0) {
-            let idx = Math.floor(Math.random() * validEnemyPlatforms.length);
-            let targetPlat = validEnemyPlatforms.splice(idx, 1)[0];
-            enemies.push(new Chihuahua(targetPlat.x + 30, targetPlat.y - 26, targetPlat.w - 60));
-        }
-    }
-
     // Goal
     finishLine = { x: levelWidth - 200, y: 300, w: 60, h: 80 };
     platforms.push({ x: levelWidth - 300, y: 380, w: 300, h: 70 });
 
+    // Populate objects
+    populateLevelObjects();
     player.reset(100, 200);
 }
 
+// 3. Triggered when losing a life: Keeps same platform map, resets treats to level start, randomizes items/enemies
 function loseLife() {
     playerLives--;
+    
+    // Reset treats to what was collected prior to starting this level
+    totalTreats = levelStartTreats;
     updateHUD();
+
     if (playerLives <= 0) {
         showGameOver();
     } else {
+        // Re-randomize treats & enemies on the SAME platform layout
+        populateLevelObjects();
         player.reset(100, 200);
     }
 }
@@ -859,19 +861,12 @@ function gameLoop() {
         if (cameraX > levelWidth - canvas.width) cameraX = levelWidth - canvas.width;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // 1. Render Parallax Background Layers
         drawParallaxBackground();
-        
-        // 2. Render World Objects
         drawPlatforms();
         drawTreats();
         handleEnemies();
         drawFinishLine();
-        
-        // 3. Render Pug Player
         player.draw();
-
-        // 4. Render Foreground Jungle Layer (Stays at screen bottom)
         drawForegroundJungle();
     }
     requestAnimationFrame(gameLoop);
@@ -879,7 +874,11 @@ function gameLoop() {
 
 // --- STATE MANAGEMENT ---
 function startGame() {
-    totalTreats = 0; playerLives = 5; currentLevel = 1; updateHUD();
+    totalTreats = 0; 
+    levelStartTreats = 0;
+    playerLives = 5; 
+    currentLevel = 1; 
+    updateHUD();
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('end-screen').classList.add('hidden');
     loadLevel(currentLevel);
@@ -887,6 +886,7 @@ function startGame() {
 }
 
 function loadLevel(lvl) {
+    levelStartTreats = totalTreats; // Save checkpoint of treats for this level
     updateHUD();
     generateLevel();
 }
@@ -907,7 +907,7 @@ function nextLevel() {
 
 function showGameOver() {
     gameState = 'GAME_OVER';
-    document.getElementById('end-desc').innerText = `You ran out of lives! Total treats: ${totalTreats}`;
+    document.getElementById('end-desc').innerText = `You ran out of lives! Total treats banked: ${totalTreats}`;
     document.getElementById('end-screen').classList.remove('hidden');
 }
 
