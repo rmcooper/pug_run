@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.19 -->
+    <!-- Version 1.0.20 -->
     <style>
         * {
             box-sizing: border-box;
@@ -222,8 +222,9 @@ window.addEventListener('keyup', e => {
 
 // --- THEME DEFINITIONS ---
 const THEMES = ['SUNNY', 'JUNGLE', 'WINTER', 'CITY_NIGHT', 'CITY_DAY'];
-
 let currentTheme = 'SUNNY';
+let lastTheme = null;
+
 let platforms = [];
 let treats = [];
 let heartPickup = null;
@@ -746,8 +747,8 @@ function drawParallaxBackground() {
 
             drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
             drawWinterMountains(0.10, '#17202a'); 
-            drawParallaxTrees(0.22, '#2e7d32', true); // Matched color with Sunny day map + snow caps
-            drawSnowDrifts(0.35, '#e2e8f0'); // Rendered in front of trees as opaque snow drift
+            drawParallaxTrees(0.22, '#2e7d32', true); 
+            drawSnowDrifts(0.35, '#e2e8f0'); 
             drawSecondaryGround(0.5, '#2c3e50'); 
             
             if (Math.random() > 0.7) {
@@ -792,6 +793,11 @@ function drawParallaxBackground() {
             drawSecondaryGround(0.5, '#52667a'); 
             break;
     }
+
+    // --- UNIVERSAL ATMOSPHERIC HAZE LAYER ---
+    // Softens background contrast so action elements pop clearly in the foreground
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
 // --- PARALLAX HELPER FUNCTIONS ---
@@ -869,7 +875,6 @@ function drawWinterMountains(factor, color) {
     ctx.fillRect(0, 50, canvas.width, canvas.height - 50);
 }
 
-// Opaque snow drifts rendered in front of trees
 function drawSnowDrifts(factor, color) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor);
@@ -1100,7 +1105,11 @@ function populateLevelObjects() {
 
 function generateLevel() {
     platforms = [];
-    currentTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
+    
+    // Pick a random theme, ensuring it doesn't repeat the previous one
+    let availableThemes = THEMES.filter(t => t !== lastTheme);
+    currentTheme = availableThemes[Math.floor(Math.random() * availableThemes.length)];
+    lastTheme = currentTheme;
 
     let x = 0;
     while (x < levelWidth) {
@@ -1370,6 +1379,7 @@ function startGame() {
     levelStartTreats = 0;
     playerLives = 5; 
     currentLevel = 1; 
+    lastTheme = null;
     updateHUD();
     document.getElementById('start-screen').classList.add('hidden');
     document.getElementById('end-screen').classList.add('hidden');
@@ -1400,7 +1410,7 @@ function nextLevel() {
 function showGameOver() {
     gameState = 'GAME_OVER';
     document.getElementById('end-desc').innerText = `You ran out of lives! Total treats banked: ${totalTreats}`;
-    document.getElementById('end-screen').classList.remove('hidden');
+    document.getElementById('end-screen').classList.add('hidden');
 }
 
 function restartGame() {
