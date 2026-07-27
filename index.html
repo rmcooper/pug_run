@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.16 -->
+    <!-- Version 1.0.17 -->
     <style>
         * {
             box-sizing: border-box;
@@ -718,8 +718,9 @@ function drawParallaxBackground() {
             
             drawClouds(0.1, '#ffffff');
             drawDistantHills(0.18, '#81c784', 220, 45, 600);
-            drawParallaxTrees(0.26, '#2e7d32', false); // Tall ground trees for Sunny
+            drawParallaxTrees(0.26, '#2e7d32', false);
             drawDistantHills(0.35, '#4caf50', 280, 35, 400);
+            drawSecondaryGround(0.5, '#388e3c'); // Secondary lower ground layer
             break;
 
         case 'JUNGLE':
@@ -728,9 +729,10 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#2e7d32');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            drawDistantMountains(0.1, '#114136', 200, 400);
-            drawDistantMountains(0.2, '#195b4e', 260, 300);
+            drawTallJungleMountains(0.08, '#14382c'); // Added towering background mountains
+            drawDistantMountains(0.15, '#195b4e', 240, 350);
             drawJungleCanopy(0.3, '#0b382d');
+            drawSecondaryGround(0.5, '#1e4d3a'); // Secondary lower ground layer
             
             if (Math.random() > 0.98) {
                 particles.push(new Particle(Math.random() * canvas.width + cameraX, Math.random() * canvas.height * 0.8, 'firefly'));
@@ -742,9 +744,10 @@ function drawParallaxBackground() {
             bgGradient.addColorStop(1, '#4a6572');
             ctx.fillStyle = bgGradient; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Dark gray mountain triangles removed
             drawClouds(0.15, 'rgba(255, 255, 255, 0.1)');
-            drawParallaxTrees(0.22, '#2c3e50', true); // Winter trees using same generator + snow
+            drawParallaxTrees(0.22, '#2c3e50', true); 
+            drawSnowDrifts(0.35, 'rgba(236, 240, 241, 0.25)'); // Low rolling faded snow drifts
+            drawSecondaryGround(0.5, '#2c3e50'); // Secondary lower ground layer
             
             if (Math.random() > 0.7) {
                 particles.push(new Particle(cameraX + Math.random() * canvas.width, -10, 'snow'));
@@ -773,6 +776,7 @@ function drawParallaxBackground() {
             drawClouds(0.15, 'rgba(20, 30, 40, 0.6)');
             drawSkyline(0.15, '#111923', true, 260, true);  
             drawSkyline(0.3, '#1c2833', true, 200, false);
+            drawSecondaryGround(0.5, '#243342'); // Secondary lower ground layer
             break;
 
         case 'CITY_DAY':
@@ -784,6 +788,7 @@ function drawParallaxBackground() {
             drawClouds(0.2, 'rgba(255, 255, 255, 0.4)');
             drawSkyline(0.15, '#5d768d', false, 240, true);  
             drawSkyline(0.3, '#3f5166', false, 180, false);
+            drawSecondaryGround(0.5, '#52667a'); // Secondary lower ground layer
             break;
     }
 }
@@ -804,6 +809,26 @@ function drawClouds(factor, color) {
     }
 }
 
+// Parallax layer running behind main platforms to ground the level depth
+function drawSecondaryGround(factor, color) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor);
+    let baseY = 405; // Slightly lower than primary platform ground level (380)
+
+    ctx.beginPath();
+    ctx.moveTo(-50, canvas.height);
+
+    for (let x = -50; x <= canvas.width + 50; x += 20) {
+        let worldX = x + offset;
+        let y = baseY + Math.sin(worldX / 150 * Math.PI * 2) * 8;
+        ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(canvas.width + 50, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+}
+
 function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
     ctx.fillStyle = color;
     let offset = (cameraX * factor);
@@ -822,17 +847,54 @@ function drawDistantHills(factor, color, baseY, amplitude, wavelength) {
     ctx.fill();
 }
 
-// Shared procedural tree renderer for Sunny and Winter maps
+// Low rolling, highly faded snow drifts for Winter
+function drawSnowDrifts(factor, color) {
+    ctx.fillStyle = color;
+    let offset = (cameraX * factor);
+    let baseY = 330;
+
+    ctx.beginPath();
+    ctx.moveTo(-50, canvas.height);
+
+    for (let x = -50; x <= canvas.width + 50; x += 15) {
+        let worldX = x + offset;
+        let y = baseY + Math.sin(worldX / 250 * Math.PI * 2) * 18 + Math.cos(worldX / 110 * Math.PI) * 10;
+        ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(canvas.width + 50, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Tall mountain range in background of Jungle map
+function drawTallJungleMountains(factor, color) {
+    ctx.fillStyle = color;
+    let spacing = 500;
+    let offset = (cameraX * factor) % spacing;
+
+    ctx.beginPath();
+    ctx.moveTo(-spacing, canvas.height);
+    for (let x = -spacing; x < canvas.width + spacing * 2; x += spacing) {
+        let rx = x - offset;
+        ctx.lineTo(rx + spacing * 0.4, 110);
+        ctx.lineTo(rx + spacing * 0.6, 140);
+        ctx.lineTo(rx + spacing * 0.8, 100);
+        ctx.lineTo(rx + spacing, canvas.height);
+    }
+    ctx.closePath();
+    ctx.fill();
+}
+
 function drawParallaxTrees(factor, foliageColor, hasSnow) {
     let loopWidth = 900;
     let offset = (cameraX * factor) % loopWidth;
-    let baseY = 380; // Ground level
+    let baseY = 380;
 
     for (let x = -loopWidth; x < canvas.width + loopWidth * 2; x += 75) {
         let rx = x - offset;
         let treeIdx = Math.floor((x + loopWidth) / 75);
         
-        // Tall procedural heights
         let treeHeight = 120 + (Math.abs(Math.sin(treeIdx * 11.3)) * 100); 
         let treeWidth = 30 + (Math.abs(Math.cos(treeIdx * 4.7)) * 20);
 
@@ -902,11 +964,10 @@ function drawJungleCanopy(factor, color) {
     }
 }
 
-// Sparser City Skyline
 function drawSkyline(factor, color, isNight, heightScale, isBackground = false) {
     ctx.fillStyle = color;
     let buildingWidth = isBackground ? 75 : 90;
-    let spacing = isBackground ? 150 : 180; // Significantly wider spacing = less dense skyline
+    let spacing = isBackground ? 150 : 180; 
     let loopWidth = spacing * 6;
     let offset = (cameraX * factor) % loopWidth;
 
@@ -915,10 +976,8 @@ function drawSkyline(factor, color, isNight, heightScale, isBackground = false) 
         let worldX = Math.floor((rx + cameraX * factor) / spacing);
         let h = heightScale + (Math.abs(Math.sin(worldX * 2.1)) * (isBackground ? 90 : 70));
 
-        // Building Main Structure
         ctx.fillRect(rx, canvas.height - h, buildingWidth, h);
         
-        // Window Color Selection
         if (isNight) {
             ctx.fillStyle = '#f1c40f'; 
         } else {
@@ -938,7 +997,6 @@ function drawSkyline(factor, color, isNight, heightScale, isBackground = false) 
             col++;
         }
 
-        // Haze Filter for background structures
         if (isBackground) {
             ctx.fillStyle = isNight ? 'rgba(15, 32, 39, 0.5)' : 'rgba(196, 224, 229, 0.5)';
             ctx.fillRect(rx, canvas.height - h, buildingWidth, h);
@@ -1174,7 +1232,6 @@ function handleEnemies() {
     });
 }
 
-// Render Doghouse Finish Line & Require Pug to Enter Opening
 function drawFinishLine() {
     let rx = finishLine.x - cameraX;
     let ry = finishLine.y;
@@ -1192,7 +1249,7 @@ function drawFinishLine() {
     ctx.closePath();
     ctx.fill();
 
-    // Doghouse Door / Entrance
+    // Doghouse Door Entrance
     let doorX = rx + 20;
     let doorW = 30;
     let doorY = ry + 32;
@@ -1204,13 +1261,13 @@ function drawFinishLine() {
     ctx.fillRect(doorX, doorY + 10, doorW, doorH - 10);
     ctx.fill();
 
-    // Bone Sign over entrance
+    // Bone Sign
     ctx.fillStyle = '#f5f5dc';
     ctx.beginPath();
     ctx.roundRect(rx + 20, ry + 8, 30, 8, 4);
     ctx.fill();
 
-    // Trigger Win only when pug center enters the door opening
+    // Trigger Win only when pug enters opening
     let pugCenterX = player.x + player.w / 2;
     let doorWorldLeft = finishLine.x + 20;
     let doorWorldRight = finishLine.x + 50;
