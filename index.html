@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pug Run: Enhanced Edition</title>
-    <!-- Version 1.0.27 -->
+    <!-- Version 1.0.28 -->
     <style>
         * {
             box-sizing: border-box;
@@ -55,7 +55,7 @@
         .hud {
             display: flex;
             justify-content: space-between;
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 800;
             text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,0.5);
             background: rgba(0, 0, 0, 0.3);
@@ -69,6 +69,20 @@
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        #music-btn {
+            pointer-events: auto;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        #music-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
         }
 
         .overlay {
@@ -172,6 +186,7 @@
             <div id="timer-display">⏱️ <span>0.0s</span></div>
             <div id="level-display">LVL 1</div>
             <div id="lives-display">❤️ <span>5</span></div>
+            <div id="music-btn" onclick="toggleMusic()">🔊 <span>ON</span></div>
         </div>
     </div>
 
@@ -218,6 +233,131 @@ let cameraX = 0;
 const levelWidth = 3200;
 const TARGET_BONES_PER_LEVEL = 25; // Constant target number of bones per level
 let levelTreatsLayout = [];
+
+// --- WEB AUDIO BGM SYNTHESIZER ---
+let audioCtx = null;
+let musicEnabled = true;
+let isMusicPlaying = false;
+let currentStep = 0;
+let musicInterval = null;
+
+// Frequencies for the "Who Let The Dogs Out" style melody/bass
+const NOTES = {
+    'C3': 130.81, 'D3': 146.83, 'E3': 164.81, 'F3': 174.61, 'G3': 196.00, 'A3': 220.00, 'Bb3': 233.08,
+    'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00, 'Bb4': 466.16
+};
+
+// 16-step patterns (128 BPM Soca/Island Beat)
+const BASS_PATTERN =  ['F3', null, 'F3', null, 'Bb3', null, 'Bb3', null, 'C3', null, 'C3', null, 'F3', null, 'F3', null];
+const LEAD_PATTERN =  ['F4', 'F4', 'F4', null, 'F4', 'D4', 'F4', null, 'G4', 'G4', 'F4', null, 'D4', null, 'C4', null];
+const DRUM_PATTERN =  ['K',  'H',  'S',  'H',  'K',   'H',  'S',  'H',  'K',  'H',  'S',  'H',  'K',  'H',  'S',  'H'];
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+}
+
+function startMusic() {
+    initAudio();
+    if (isMusicPlaying || !musicEnabled) return;
+    isMusicPlaying = true;
+    currentStep = 0;
+    
+    // 128 BPM -> ~117ms per 16th note
+    musicInterval = setInterval(playMusicStep, 117);
+}
+
+function stopMusic() {
+    if (musicInterval) {
+        clearInterval(musicInterval);
+        musicInterval = null;
+    }
+    isMusicPlaying = false;
+}
+
+function toggleMusic() {
+    musicEnabled = !musicEnabled;
+    const btn = document.getElementById('music-btn');
+    if (musicEnabled) {
+        btn.innerHTML = '🔊 <span>ON</span>';
+        if (gameState === 'PLAYING') startMusic();
+    } else {
+        btn.innerHTML = '🔇 <span>OFF</span>';
+        stopMusic();
+    }
+}
+
+function playMusicStep() {
+    if (!musicEnabled || !audioCtx) return;
+
+    const t = audioCtx.currentTime;
+
+    // Bass Synth
+    const bassNote = BASS_PATTERN[currentStep];
+    if (bassNote) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(NOTES[bassNote], t);
+        
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.15);
+    }
+
+    // Lead Synth (Brass-like)
+    const leadNote = LEAD_PATTERN[currentStep];
+    if (leadNote) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(NOTES[leadNote], t);
+
+        gain.gain.setValueAtTime(0.08, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.12);
+    }
+
+    // Percussion
+    const drum = DRUM_PATTERN[currentStep];
+    if (drum === 'K') { // Kick
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(120, t);
+        osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.1);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.1);
+    } else if (drum === 'S') { // Snare / Bark Hit
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220, t);
+        gain.gain.setValueAtTime(0.15, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.08);
+    }
+
+    currentStep = (currentStep + 1) % 16;
+}
 
 // Keys State
 const keys = {
@@ -1502,6 +1642,7 @@ function startGame() {
     document.getElementById('end-screen').classList.add('hidden');
     loadLevel(currentLevel);
     gameState = 'PLAYING';
+    startMusic();
 }
 
 function loadLevel(lvl) {
@@ -1524,10 +1665,12 @@ function nextLevel() {
     document.getElementById('level-screen').classList.add('hidden');
     loadLevel(currentLevel);
     gameState = 'PLAYING';
+    startMusic();
 }
 
 function showGameOver() {
     gameState = 'GAME_OVER';
+    stopMusic();
     document.getElementById('end-desc').innerText = `You ran out of lives on Level ${currentLevel}!`;
     document.getElementById('end-screen').classList.remove('hidden');
 }
